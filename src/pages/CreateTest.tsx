@@ -416,6 +416,7 @@ const CreateTest = () => {
       questions: questionsWithIds,
       createdBy: user.id,
       status,
+      unique_id: undefined, // Will be auto-generated
     });
 
     toast({
