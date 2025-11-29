@@ -1,6 +1,5 @@
 
 import { createContext, useContext, ReactNode, useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 
 export interface Question {
@@ -47,58 +46,109 @@ interface TestContextType {
 
 const TestContext = createContext<TestContextType | undefined>(undefined);
 
+const STORAGE_KEY = "pariksha_tests";
+
+// Mock tests for demo
+const MOCK_TESTS: Test[] = [
+  {
+    id: "test-001",
+    title: "Introduction to Computer Science",
+    subject: "Computer Science",
+    duration: 60,
+    createdBy: "11111111-1111-1111-1111-111111111111",
+    createdAt: new Date("2024-01-15"),
+    status: "published",
+    unique_id: "TST-CS001",
+    questions: [
+      {
+        id: "q1",
+        type: "mcq",
+        text: "What does CPU stand for?",
+        options: ["Central Processing Unit", "Computer Personal Unit", "Central Program Utility", "Computer Processing Unit"],
+        correctAnswer: "Central Processing Unit",
+        marks: 5,
+      },
+      {
+        id: "q2",
+        type: "mcq",
+        text: "Which of the following is not an operating system?",
+        options: ["Windows", "Linux", "Oracle", "macOS"],
+        correctAnswer: "Oracle",
+        marks: 5,
+      },
+      {
+        id: "q3",
+        type: "truefalse",
+        text: "RAM is a type of permanent storage.",
+        correctAnswer: false,
+        marks: 3,
+      },
+    ],
+  },
+  {
+    id: "test-002",
+    title: "Basic Mathematics Quiz",
+    subject: "Mathematics",
+    duration: 45,
+    createdBy: "22222222-2222-2222-2222-222222222222",
+    createdAt: new Date("2024-01-20"),
+    status: "published",
+    unique_id: "TST-MATH01",
+    questions: [
+      {
+        id: "q1",
+        type: "mcq",
+        text: "What is the value of π (pi) approximately?",
+        options: ["3.14", "2.71", "1.41", "1.73"],
+        correctAnswer: "3.14",
+        marks: 5,
+      },
+      {
+        id: "q2",
+        type: "short",
+        text: "Solve: 15 + 27 = ?",
+        correctAnswer: "42",
+        marks: 5,
+      },
+    ],
+  },
+];
+
 export function TestProvider({ children }: { children: ReactNode }) {
   const [tests, setTests] = useState<Test[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchTests = async () => {
-    try {
-      const { data: testsData, error: testsError } = await supabase
-        .from("tests")
-        .select(`
-          *,
-          questions (*)
-        `)
-        .order("created_at", { ascending: false });
-
-      if (testsError) {
-        console.error("Error fetching tests:", testsError);
-        return;
-      }
-
-      if (testsData) {
-        const transformedTests: Test[] = testsData.map((test) => ({
-          id: test.id,
-          title: test.title,
-          subject: test.subject,
-          duration: test.duration_minutes,
-          createdBy: test.created_by,
-          createdAt: new Date(test.created_at),
-          status: test.test_type === "mcq" ? "published" : "published",
-          unique_id: test.test_id,
-          questions: (test.questions || []).map((q: any) => ({
-            id: q.id,
-            type: q.question_type as Question["type"],
-            text: q.question_text,
-            options: q.options as string[] | undefined,
-            correctAnswer: q.correct_answer,
-            marks: q.marks,
-          })).sort((a: any, b: any) => a.order_number - b.order_number),
-        }));
-
-        setTests(transformedTests);
-      }
-    } catch (error) {
-      console.error("Error in fetchTests:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Load tests from localStorage on mount
   useEffect(() => {
-    fetchTests();
+    const storedTests = localStorage.getItem(STORAGE_KEY);
+    if (storedTests) {
+      try {
+        const parsed = JSON.parse(storedTests);
+        // Convert date strings back to Date objects
+        const testsWithDates = parsed.map((test: any) => ({
+          ...test,
+          createdAt: new Date(test.createdAt),
+        }));
+        setTests(testsWithDates);
+      } catch (error) {
+        console.error("Error parsing stored tests:", error);
+        // Initialize with mock tests if parsing fails
+        setTests(MOCK_TESTS);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TESTS));
+      }
+    } else {
+      // Initialize with mock tests
+      setTests(MOCK_TESTS);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(MOCK_TESTS));
+    }
+    setIsLoading(false);
   }, []);
+
+  // Save tests to localStorage whenever they change
+  const saveToStorage = (updatedTests: Test[]) => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedTests));
+  };
 
   const generateUniqueTestId = () => {
     const randomPart = Math.random().toString(36).substring(2, 10).toUpperCase();
@@ -109,99 +159,16 @@ export function TestProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
-      // Get the authenticated user
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a test.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      const testId = generateUniqueTestId();
-      
-      // Map question type to database enum
-      const mapQuestionType = (type: string): "mcq" | "truefalse" | "short" | "descriptive" | "image" => {
-        switch (type) {
-          case "mcq": return "mcq";
-          case "truefalse": return "truefalse";
-          case "short": return "short";
-          case "long":
-          case "essay":
-          case "coding":
-            return "descriptive";
-          case "image": return "image";
-          default: return "short";
-        }
+      const newTest: Test = {
+        ...test,
+        id: crypto.randomUUID(),
+        createdAt: new Date(),
+        unique_id: test.unique_id || generateUniqueTestId(),
       };
 
-      // Determine test type based on questions
-      const hasOnlyMcq = test.questions.every(q => q.type === "mcq" || q.type === "truefalse");
-      const hasOnlyDescriptive = test.questions.every(q => ["short", "long", "essay", "coding"].includes(q.type));
-      const testType = hasOnlyMcq ? "mcq" : hasOnlyDescriptive ? "descriptive" : "mixed";
-
-      // Calculate total marks
-      const totalMarks = test.questions.reduce((sum, q) => sum + q.marks, 0);
-
-      // Insert test into database - use authenticated user's ID
-      const { data: newTest, error: testError } = await supabase
-        .from("tests")
-        .insert({
-          title: test.title,
-          subject: test.subject,
-          duration_minutes: test.duration,
-          created_by: user.id, // Use authenticated user's ID
-          test_id: testId,
-          test_type: testType,
-          total_marks: totalMarks,
-          passing_marks: Math.floor(totalMarks * 0.4),
-        })
-        .select()
-        .single();
-
-      if (testError) {
-        console.error("Error creating test:", testError);
-        toast({
-          title: "Error",
-          description: testError.message.includes("row-level security") 
-            ? "You don't have permission to create tests. Please ensure you have faculty or admin role."
-            : "Failed to create test. Please try again.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      // Insert questions
-      const questionsToInsert = test.questions.map((q, index) => ({
-        test_id: newTest.id,
-        question_text: q.text,
-        question_type: mapQuestionType(q.type),
-        options: q.options ? q.options : null,
-        correct_answer: q.correctAnswer?.toString() || null,
-        marks: q.marks,
-        order_number: index + 1,
-      }));
-
-      const { error: questionsError } = await supabase
-        .from("questions")
-        .insert(questionsToInsert);
-
-      if (questionsError) {
-        console.error("Error creating questions:", questionsError);
-        toast({
-          title: "Warning",
-          description: "Test created but some questions failed to save.",
-          variant: "destructive",
-        });
-      }
-
-      // Refresh tests list
-      await fetchTests();
+      const updatedTests = [newTest, ...tests];
+      setTests(updatedTests);
+      saveToStorage(updatedTests);
 
       toast({
         title: "Success",
@@ -223,31 +190,11 @@ export function TestProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
-      const updateData: any = {};
-      
-      if (updatedFields.title) updateData.title = updatedFields.title;
-      if (updatedFields.subject) updateData.subject = updatedFields.subject;
-      if (updatedFields.duration) updateData.duration_minutes = updatedFields.duration;
-
-      if (Object.keys(updateData).length > 0) {
-        const { error } = await supabase
-          .from("tests")
-          .update(updateData)
-          .eq("id", id);
-
-        if (error) {
-          console.error("Error updating test:", error);
-          toast({
-            title: "Error",
-            description: "Failed to update test.",
-            variant: "destructive",
-          });
-          setIsLoading(false);
-          return;
-        }
-      }
-
-      await fetchTests();
+      const updatedTests = tests.map((test) =>
+        test.id === id ? { ...test, ...updatedFields } : test
+      );
+      setTests(updatedTests);
+      saveToStorage(updatedTests);
 
       toast({
         title: "Success",
@@ -255,6 +202,11 @@ export function TestProvider({ children }: { children: ReactNode }) {
       });
     } catch (error) {
       console.error("Error in updateTest:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update test.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -264,34 +216,9 @@ export function TestProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
 
     try {
-      // Delete questions first (due to foreign key constraint)
-      const { error: questionsError } = await supabase
-        .from("questions")
-        .delete()
-        .eq("test_id", id);
-
-      if (questionsError) {
-        console.error("Error deleting questions:", questionsError);
-      }
-
-      // Delete the test
-      const { error: testError } = await supabase
-        .from("tests")
-        .delete()
-        .eq("id", id);
-
-      if (testError) {
-        console.error("Error deleting test:", testError);
-        toast({
-          title: "Error",
-          description: "Failed to delete test.",
-          variant: "destructive",
-        });
-        setIsLoading(false);
-        return;
-      }
-
-      await fetchTests();
+      const updatedTests = tests.filter((test) => test.id !== id);
+      setTests(updatedTests);
+      saveToStorage(updatedTests);
 
       toast({
         title: "Success",
@@ -299,18 +226,35 @@ export function TestProvider({ children }: { children: ReactNode }) {
       });
     } catch (error) {
       console.error("Error in deleteTest:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete test.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const getTestById = (id: string) => {
-    return tests.find((test) => test.id === id);
+    return tests.find((test) => test.id === id || test.unique_id === id);
   };
 
   const refreshTests = async () => {
-    setIsLoading(true);
-    await fetchTests();
+    // Just reload from localStorage
+    const storedTests = localStorage.getItem(STORAGE_KEY);
+    if (storedTests) {
+      try {
+        const parsed = JSON.parse(storedTests);
+        const testsWithDates = parsed.map((test: any) => ({
+          ...test,
+          createdAt: new Date(test.createdAt),
+        }));
+        setTests(testsWithDates);
+      } catch (error) {
+        console.error("Error refreshing tests:", error);
+      }
+    }
   };
 
   const value: TestContextType = {
