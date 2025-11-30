@@ -364,15 +364,7 @@ export type Database = {
           updated_at?: string
           warning_threshold?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "tests_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
