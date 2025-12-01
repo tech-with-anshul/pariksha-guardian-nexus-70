@@ -235,6 +235,30 @@ const TakeTest = () => {
     };
   }, [test, warningCount, toast, tabSwitchCount, supabaseSession]);
 
+  // Sound monitoring state
+  const [soundAlerts, setSoundAlerts] = useState<number>(0);
+  const [soundLogs, setSoundLogs] = useState<Array<{time: string, level: number}>>([]);
+
+  // Sound monitoring handlers
+  const handleHighVolumeDetected = (level: number) => {
+    setSoundAlerts(prev => prev + 1);
+    
+    const timestamp = new Date().toLocaleTimeString();
+    setSoundLogs(prev => [...prev, { time: timestamp, level }]);
+    
+    supabaseSession.logMonitoringEvent("high_volume_detected", { level, timestamp });
+    
+    toast({
+      title: "⚠️ High Volume Detected",
+      description: `Sound level: ${level}%. Please maintain silence.`,
+      variant: "destructive",
+    });
+  };
+
+  const handleSoundLevelChange = (level: number) => {
+    // Optionally log continuous sound levels if needed
+  };
+
   // Monitoring integration
   useEffect(() => {
     if (test && testIdVerified && monitorFullscreen && !isMonitoring) {
@@ -250,7 +274,7 @@ const TakeTest = () => {
       stopMonitoring();
       webcamMonitoring.stopMonitoring();
     }
-  }, [test, testIdVerified, monitorFullscreen, isMonitoring, startMonitoring, stopMonitoring, toast]);
+  }, [test, testIdVerified, monitorFullscreen, isMonitoring]);
 
   // Enhanced tab switching prevention
   useEffect(() => {
@@ -626,7 +650,13 @@ const TakeTest = () => {
           <div className="flex items-center justify-center h-screen">
             <TestIDVerification 
               expectedTestId={test.unique_id || ''} 
-              onSuccess={() => setTestIdVerified(true)}
+              onSuccess={() => {
+                setTestIdVerified(true);
+                toast({
+                  title: "Verification Successful",
+                  description: "You can now proceed with the test.",
+                });
+              }}
               testTitle={test.title}
             />
           </div>
@@ -636,14 +666,16 @@ const TakeTest = () => {
             animate={{ opacity: 1 }}
             className="container mx-auto py-6"
           >
-            {/* Add monitoring status display */}
-            <WebcamStatus
-              isActive={webcamMonitoring.isMonitoring}
-              peopleCount={webcamMonitoring.status.peopleCount}
-              faceDirection={webcamMonitoring.status.faceDirection}
-              violationCount={webcamMonitoring.violationCount}
-              isFullscreen={monitorFullscreen}
-            />
+            {/* Monitoring status */}
+            <div className="mb-4">
+              <WebcamStatus
+                isActive={webcamMonitoring.isMonitoring}
+                peopleCount={webcamMonitoring.status.peopleCount}
+                faceDirection={webcamMonitoring.status.faceDirection}
+                violationCount={webcamMonitoring.violationCount}
+                isFullscreen={monitorFullscreen}
+              />
+            </div>
 
             {/* WebcamMonitor component */}
             <WebcamMonitor
@@ -652,6 +684,7 @@ const TakeTest = () => {
               onStatusUpdate={webcamMonitoring.updateStatus}
             />
 
+            {/* Test header */}
             <div className="flex justify-between items-center mb-6">
               <div>
                 <h1 className="text-3xl font-bold">{test.title}</h1>
@@ -684,9 +717,10 @@ const TakeTest = () => {
               </div>
             </div>
             
+            {/* Question card */}
             <Card className="bg-card/90 backdrop-blur-md border-primary/20 mb-6">
               <CardContent className="p-6">
-                {currentQuestion && (
+                {currentQuestion ? (
                   <div className="space-y-6">
                     <div>
                       <div className="flex justify-between mb-2">
@@ -878,10 +912,15 @@ const TakeTest = () => {
                       )}
                     </div>
                   </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No questions available for this test.</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
             
+            {/* Navigation buttons */}
             <div className="flex justify-between">
               <Button 
                 variant="outline" 
@@ -907,12 +946,12 @@ const TakeTest = () => {
               </Button>
             </div>
 
-            {/* Sound Monitor - Add this after WebcamMonitor */}
+            {/* Sound Monitor - Fixed positioning */}
             <div className="fixed bottom-4 right-4 z-50 w-80">
               <SoundMonitor
                 onHighVolumeDetected={handleHighVolumeDetected}
                 onSoundLevelChange={handleSoundLevelChange}
-                threshold={70}
+                threshold={40}
                 enabled={isFullscreen && testIdVerified}
               />
               

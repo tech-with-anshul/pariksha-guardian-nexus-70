@@ -14,7 +14,7 @@ interface SoundMonitorProps {
 const SoundMonitor = ({ 
   onHighVolumeDetected, 
   onSoundLevelChange,
-  threshold = 70,
+  threshold = 40, // Changed from 70 to 40
   enabled = true 
 }: SoundMonitorProps) => {
   const [soundLevel, setSoundLevel] = useState(0);
