@@ -14,7 +14,7 @@ interface SoundMonitorProps {
 const SoundMonitor = ({ 
   onHighVolumeDetected, 
   onSoundLevelChange,
-  threshold = 40, // Changed from 70 to 40
+  threshold = 40,
   enabled = true 
 }: SoundMonitorProps) => {
   const [soundLevel, setSoundLevel] = useState(0);
@@ -135,31 +135,31 @@ const SoundMonitor = ({
   return (
     <>
       <Card className="bg-card/95 backdrop-blur-sm border-primary/20">
-        <CardContent className="p-4">
-          <div className="space-y-3">
+        <CardContent className="p-2 sm:p-3">
+          <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5">
                 {soundLevel === 0 ? (
-                  <VolumeX className={`h-5 w-5 text-muted-foreground`} />
+                  <VolumeX className={`h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground`} />
                 ) : (
-                  <Volume2 className={`h-5 w-5 ${getVolumeColor()}`} />
+                  <Volume2 className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${getVolumeColor()}`} />
                 )}
-                <span className="text-sm font-medium">Sound Level</span>
+                <span className="text-xs sm:text-sm font-medium">Sound</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${getVolumeColor()}`}>
+              <div className="flex items-center gap-1.5">
+                <span className={`text-xs sm:text-sm font-bold ${getVolumeColor()}`}>
                   {soundLevel}%
                 </span>
                 {alertCount > 0 && (
-                  <Badge variant="destructive" className="text-xs">
-                    {alertCount} alerts
+                  <Badge variant="destructive" className="text-[10px] sm:text-xs px-1 py-0 h-4">
+                    {alertCount}
                   </Badge>
                 )}
               </div>
             </div>
 
             {/* Volume meter */}
-            <div className="relative h-2 bg-secondary rounded-full overflow-hidden">
+            <div className="relative h-1.5 sm:h-2 bg-secondary rounded-full overflow-hidden">
               <motion.div
                 className={`h-full ${getVolumeBgColor()} rounded-full`}
                 initial={{ width: 0 }}
@@ -173,53 +173,53 @@ const SoundMonitor = ({
               />
             </div>
 
-            {/* Volume bars visualization */}
-            <div className="flex items-end gap-1 h-12">
-              {[...Array(20)].map((_, i) => {
-                const barHeight = Math.max(0, soundLevel - (i * 5));
+            {/* Volume bars visualization - Simplified for mobile */}
+            <div className="flex items-end gap-0.5 h-6 sm:h-8">
+              {[...Array(12)].map((_, i) => {
+                const barHeight = Math.max(0, soundLevel - (i * 8));
                 return (
                   <motion.div
                     key={i}
                     className={`flex-1 rounded-t ${getVolumeBgColor()}`}
-                    animate={{ height: `${Math.min(100, barHeight * 2)}%` }}
+                    animate={{ height: `${Math.min(100, barHeight * 3)}%` }}
                     transition={{ duration: 0.1 }}
                   />
                 );
               })}
             </div>
 
-            <div className="text-xs text-muted-foreground text-center">
-              Threshold: {threshold}% • Monitoring active
+            <div className="text-[10px] sm:text-xs text-muted-foreground text-center">
+              Threshold: {threshold}%
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* High Volume Alert */}
+      {/* High Volume Alert - Compact for mobile */}
       <AnimatePresence>
         {showAlert && (
           <motion.div
             initial={{ opacity: 0, y: -50, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.9 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-50"
+            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm"
           >
             <Card className="bg-red-500/10 border-2 border-red-500 shadow-2xl">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
                   <motion.div
                     animate={{ rotate: [0, -10, 10, -10, 10, 0] }}
                     transition={{ duration: 0.5, repeat: Infinity }}
                   >
-                    <AlertTriangle className="h-6 w-6 text-red-500" />
+                    <AlertTriangle className="h-5 w-5 sm:h-6 sm:w-6 text-red-500 flex-shrink-0" />
                   </motion.div>
-                  <div>
-                    <h3 className="font-bold text-red-500">High Volume Detected!</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Please maintain silence during the exam
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-bold text-red-500 text-sm sm:text-base">High Volume!</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">
+                      Please maintain silence
                     </p>
                   </div>
-                  <Badge variant="destructive" className="ml-2">
+                  <Badge variant="destructive" className="text-xs sm:text-sm px-1.5 sm:px-2">
                     {soundLevel}%
                   </Badge>
                 </div>

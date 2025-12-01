@@ -946,8 +946,8 @@ const TakeTest = () => {
               </Button>
             </div>
 
-            {/* Sound Monitor - Fixed positioning */}
-            <div className="fixed bottom-4 right-4 z-50 w-80">
+            {/* Sound Monitor - Compact positioning for mobile */}
+            <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50 w-[180px] sm:w-60">
               <SoundMonitor
                 onHighVolumeDetected={handleHighVolumeDetected}
                 onSoundLevelChange={handleSoundLevelChange}
@@ -955,17 +955,17 @@ const TakeTest = () => {
                 enabled={isFullscreen && testIdVerified}
               />
               
-              {/* Sound Alerts Summary */}
+              {/* Sound Alerts Summary - Compact for mobile */}
               {soundAlerts > 0 && (
-                <Card className="mt-2 bg-card/95 backdrop-blur-sm border-red-500/30">
-                  <CardContent className="p-3">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-red-500">Sound Violations</span>
-                      <Badge variant="destructive">{soundAlerts}</Badge>
+                <Card className="mt-1 sm:mt-2 bg-card/95 backdrop-blur-sm border-red-500/30">
+                  <CardContent className="p-2">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium text-red-500">Violations</span>
+                      <Badge variant="destructive" className="text-xs px-1 py-0 h-4">{soundAlerts}</Badge>
                     </div>
-                    <div className="space-y-1 max-h-24 overflow-y-auto">
-                      {soundLogs.slice(-3).reverse().map((log, index) => (
-                        <div key={index} className="text-xs text-muted-foreground">
+                    <div className="space-y-0.5 max-h-16 sm:max-h-20 overflow-y-auto">
+                      {soundLogs.slice(-2).reverse().map((log, index) => (
+                        <div key={index} className="text-[10px] text-muted-foreground truncate">
                           {log.time} - {log.level}%
                         </div>
                       ))}
