@@ -292,22 +292,7 @@ export type Database = {
           test_id?: string
           total_warnings?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "test_sessions_student_id_fkey"
-            columns: ["student_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "test_sessions_test_id_fkey"
-            columns: ["test_id"]
-            isOneToOne: false
-            referencedRelation: "tests"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       tests: {
         Row: {
