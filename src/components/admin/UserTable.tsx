@@ -1,5 +1,17 @@
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -8,19 +20,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Edit, Trash2, Shield } from "lucide-react";
-import { UserRole, User } from "@/context/AuthContext";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { User, UserRole } from "@/context/AuthContext";
+import { Edit, IdCard, Mail, Trash2 } from "lucide-react";
 
 interface UserTableProps {
   users: User[];
   role: UserRole;
   onEdit: (user: User) => void;
   onDelete: (userId: string, role: UserRole) => void;
+  selectedUsers?: string[];
+  onToggleSelect?: (userId: string) => void;
 }
 
-const UserTable = ({ users, role, onEdit, onDelete }: UserTableProps) => {
+const UserTable = ({ users, role, onEdit, onDelete, selectedUsers = [], onToggleSelect }: UserTableProps) => {
   // Function to get permission display name
   const getPermissionName = (permissionId: string): string => {
     const permissionMap: Record<string, string> = {
@@ -40,96 +52,155 @@ const UserTable = ({ users, role, onEdit, onDelete }: UserTableProps) => {
     return permissionMap[permissionId] || permissionId;
   };
 
+  const handleSelectAll = (checked: boolean) => {
+    if (!onToggleSelect) return;
+    
+    if (checked) {
+      users.forEach(user => {
+        if (!selectedUsers.includes(user.id)) {
+          onToggleSelect(user.id);
+        }
+      });
+    } else {
+      users.forEach(user => {
+        if (selectedUsers.includes(user.id)) {
+          onToggleSelect(user.id);
+        }
+      });
+    }
+  };
+
+  const allSelected = users.length > 0 && users.every(user => selectedUsers.includes(user.id));
+  const someSelected = users.some(user => selectedUsers.includes(user.id)) && !allSelected;
+
+  if (users.length === 0) {
+    return (
+      <div className="text-center py-12 text-muted-foreground">
+        <p>No {role === "faculty" ? "faculty members" : "students"} found</p>
+      </div>
+    );
+  }
+
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Email</TableHead>
-          <TableHead>{role === "faculty" ? "Department" : "Course"}</TableHead>
-          <TableHead>ERP ID</TableHead>
-          <TableHead>Permissions</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {users.length > 0 ? (
-          users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium">{user.name}</TableCell>
-              <TableCell>{user.email}</TableCell>
-              <TableCell>
-                {role === "faculty" ? user.department : user.course}
-              </TableCell>
-              <TableCell>{user.erpId}</TableCell>
-              <TableCell>
-                <div className="flex flex-wrap gap-1 max-w-[200px]">
-                  {user.permissions && user.permissions.includes('all') ? (
-                    <Badge variant="outline" className="bg-primary/10">
-                      All Permissions
-                    </Badge>
-                  ) : (
-                    user.permissions && user.permissions.length > 0 ? (
-                      <>
-                        <Badge variant="outline" className="bg-primary/10">
-                          {user.permissions.length}
-                        </Badge>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-5 w-5">
-                                <Shield className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <div className="max-w-[200px]">
-                                {user.permissions.map((p) => (
-                                  <div key={p} className="text-xs">
-                                    {getPermissionName(p)}
-                                  </div>
-                                ))}
-                              </div>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </>
-                    ) : (
-                      <Badge variant="outline" className="bg-destructive/10">
-                        None
-                      </Badge>
-                    )
-                  )}
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {onToggleSelect && (
+              <TableHead className="w-12">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Select all"
+                  className={someSelected ? "data-[state=checked]:bg-primary/50" : ""}
+                />
+              </TableHead>
+            )}
+            <TableHead>Name</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>ERP ID</TableHead>
+            <TableHead>{role === "faculty" ? "Department" : "Course"}</TableHead>
+            {role === "faculty" && <TableHead>Permissions</TableHead>}
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow key={user.id} className="hover:bg-muted/50">
+              {onToggleSelect && (
+                <TableCell>
+                  <Checkbox
+                    checked={selectedUsers.includes(user.id)}
+                    onCheckedChange={() => onToggleSelect(user.id)}
+                    aria-label={`Select ${user.name}`}
+                  />
+                </TableCell>
+              )}
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                    <span className="text-xs font-bold text-primary">
+                      {user.name.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                  {user.name}
                 </div>
               </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <Mail className="h-3 w-3 text-muted-foreground" />
+                  {user.email}
+                </div>
+              </TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <IdCard className="h-3 w-3 text-muted-foreground" />
+                  <Badge variant="outline">{user.erpId || "N/A"}</Badge>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="secondary">
+                  {role === "faculty" ? user.department : user.course}
+                </Badge>
+              </TableCell>
+              {role === "faculty" && (
+                <TableCell>
+                  <div className="flex flex-wrap gap-1">
+                    {user.permissions?.map((permission) => (
+                      <Badge key={permission} variant="outline" className="text-xs">
+                        {permission.replace(/_/g, " ")}
+                      </Badge>
+                    )) || <span className="text-muted-foreground text-sm">None</span>}
+                  </div>
+                </TableCell>
+              )}
               <TableCell className="text-right">
                 <div className="flex justify-end gap-2">
-                  <Button 
-                    size="icon" 
+                  <Button
                     variant="ghost"
+                    size="icon"
                     onClick={() => onEdit(user)}
+                    className="hover:bg-primary/10 hover:text-primary"
                   >
                     <Edit className="h-4 w-4" />
                   </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    onClick={() => onDelete(user.id, role)}
-                  >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                  
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This will permanently delete <strong>{user.name}</strong> from the system.
+                          This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => onDelete(user.id, role)}
+                          className="bg-destructive hover:bg-destructive/90"
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </TableCell>
             </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={6} className="text-center py-6">
-              No {role === "faculty" ? "faculty" : "students"} found
-            </TableCell>
-          </TableRow>
-        )}
-      </TableBody>
-    </Table>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 
