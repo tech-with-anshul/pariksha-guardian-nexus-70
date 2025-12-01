@@ -1,6 +1,6 @@
-import { createContext, useContext, ReactNode, useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
 // UI-compatible Question interface (supports all UI question types)
 export interface Question {
@@ -362,3 +362,84 @@ export function useTest() {
   }
   return context;
 }
+
+const initialTests: Test[] = [
+  {
+    id: "test1",
+    title: "Mid-Term Examination",
+    subject: "Computer Science",
+    duration: 60,
+    totalMarks: 100,
+    passingMarks: 40,
+    enableMonitoring: true,
+    testType: "mixed",
+    createdBy: "admin",
+    createdAt: new Date(),
+    status: "published",
+    unique_id: "TST-12345678",
+    description: "Mid-term examination for Computer Science subject.",
+    questions: [
+      {
+        id: "q1",
+        type: "mcq",
+        text: "What is the capital of France?",
+        options: ["Berlin", "Madrid", "Paris", "Lisbon"],
+        correctAnswer: "Paris",
+        marks: 1,
+      },
+      {
+        id: "q2",
+        type: "truefalse",
+        text: "The Earth is flat.",
+        correctAnswer: false,
+        marks: 1,
+      },
+      {
+        id: "q3",
+        type: "short",
+        text: "Explain the theory of relativity.",
+        marks: 5,
+        answerHint: "Think about time dilation and length contraction.",
+      },
+    ],
+  },
+  {
+    id: "test2",
+    title: "Final Assessment",
+    subject: "Mathematics",
+    duration: 90,
+    totalMarks: 100,
+    passingMarks: 50,
+    enableMonitoring: true,
+    testType: "mixed",
+    createdBy: "admin",
+    createdAt: new Date(),
+    status: "published",
+    unique_id: "TST-87654321",
+    description: "Final assessment for Mathematics subject.",
+    questions: [
+      {
+        id: "q1",
+        type: "mcq",
+        text: "What is 2 + 2?",
+        options: ["3", "4", "5", "6"],
+        correctAnswer: "4",
+        marks: 1,
+      },
+      {
+        id: "q2",
+        type: "truefalse",
+        text: "The square root of 16 is 4.",
+        correctAnswer: true,
+        marks: 1,
+      },
+      {
+        id: "q3",
+        type: "short",
+        text: "Solve the equation: 2x + 3 = 7.",
+        marks: 5,
+        answerHint: "Isolate x on one side of the equation.",
+      },
+    ],
+  },
+];

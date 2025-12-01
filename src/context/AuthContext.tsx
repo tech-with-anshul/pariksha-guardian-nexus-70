@@ -1,5 +1,4 @@
-
-import { createContext, useContext, useState, ReactNode, useEffect } from "react";
+import { createContext, ReactNode, useContext, useEffect, useState } from "react";
 
 // Define user types
 export type UserRole = "faculty" | "student" | "admin" | null;
@@ -47,11 +46,17 @@ const MOCK_USERS: Record<string, MockUser[]> = {
     { id: "11111111-1111-1111-1111-111111111111", name: "Dr. Jane Smith", email: "jane@faculty.edu", erpId: "DBUUF001", password: "123456", role: "faculty", department: "Computer Science", permissions: [...DEFAULT_PERMISSIONS.faculty] },
     { id: "22222222-2222-2222-2222-222222222222", name: "Prof. John Doe", email: "john@faculty.edu", erpId: "DBUUF002", password: "password123", role: "faculty", department: "Mathematics", permissions: [...DEFAULT_PERMISSIONS.faculty] },
     { id: "33333333-3333-3333-3333-333333333333", name: "Mr. Yudhveer Singh Moudgil", email: "yudhveer@faculty.edu", erpId: "DBUUF003", password: "123456", role: "faculty", department: "Computer Science", permissions: [...DEFAULT_PERMISSIONS.faculty] },
+    { id: "f1", name: "Dr. Rajesh Kumar", email: "rajesh@pariksha.edu", erpId: "DBUUF001", password: "123456", role: "faculty", department: "Computer Science", permissions: ["create_test", "manage_users", "view_analytics"] },
+    { id: "f2", name: "Prof. Priya Sharma", email: "priya@pariksha.edu", erpId: "DBUUF002", password: "faculty123", role: "faculty", department: "Mathematics", permissions: ["create_test", "view_analytics"] },
+    { id: "f3", name: "Dr. Amit Patel", email: "amit@pariksha.edu", erpId: "DBUUF003", password: "faculty123", role: "faculty", department: "Physics", permissions: ["create_test", "view_analytics", "moderate_exams"] },
   ],
   student: [
     { id: "44444444-4444-4444-4444-444444444444", name: "Alex Johnson", email: "alex@student.edu", erpId: "22BTCSE0100", password: "password123", role: "student", course: "Computer Science", permissions: [...DEFAULT_PERMISSIONS.student] },
     { id: "55555555-5555-5555-5555-555555555555", name: "Sam Williams", email: "sam@student.edu", erpId: "22BTCSE0101", password: "password123", role: "student", course: "Mathematics", permissions: [...DEFAULT_PERMISSIONS.student] },
     { id: "66666666-6666-6666-6666-666666666666", name: "Anshul", email: "anshul@student.edu", erpId: "22BTCSE0200", password: "24042004", role: "student", course: "Computer Science", permissions: [...DEFAULT_PERMISSIONS.student] },
+    { id: "s1", name: "Rahul Verma", email: "rahul@student.pariksha.edu", erpId: "22BTCSE0200", password: "24042004", role: "student", course: "Computer Science" },
+    { id: "s2", name: "Sneha Reddy", email: "sneha@student.pariksha.edu", erpId: "22BTCSE0201", password: "student123", role: "student", course: "Mathematics" },
+    { id: "s3", name: "Arjun Singh", email: "arjun@student.pariksha.edu", erpId: "22BTCSE0202", password: "student123", role: "student", course: "Physics" },
   ],
   admin: [
     { id: "77777777-7777-7777-7777-777777777777", name: "Admin User", email: "admin@pariksha.edu", erpId: "ADMIN001", password: "admin123", role: "admin", permissions: [...DEFAULT_PERMISSIONS.admin] },

@@ -1,36 +1,35 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
+import ThreeDBackground from "@/components/3d/ThreeDBackground";
+import CodingConsole from "@/components/CodingConsole";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
-import ThreeDBackground from "@/components/3d/ThreeDBackground";
 import { useAuth } from "@/context/AuthContext";
-import { useTest, Question } from "@/context/TestContext";
-import CodingConsole from "@/components/CodingConsole";
-import { 
-  Plus, 
-  Minus, 
-  ArrowLeft, 
-  Save, 
-  Check, 
-  Shield, 
-  LogOut,
-  Trash,
+import { Question, useTest } from "@/context/TestContext";
+import { motion } from "framer-motion";
+import {
+  ArrowLeft,
+  Check,
+  Code,
   FileImage,
   FileText,
-  Text,
-  Code,
-  Upload,
+  Loader2,
+  LogOut,
+  Minus,
+  Plus,
+  Save,
+  Shield,
   Sparkles,
-  Loader2
+  Text,
+  Trash
 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
-const subjects = [
+const AVAILABLE_SUBJECTS = [
   "Computer Science",
   "Mathematics",
   "Physics",
@@ -630,7 +629,7 @@ const CreateTest = () => {
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
                   <SelectContent>
-                    {subjects.map((sub) => (
+                    {AVAILABLE_SUBJECTS.map((sub) => (
                       <SelectItem key={sub} value={sub}>
                         {sub}
                       </SelectItem>

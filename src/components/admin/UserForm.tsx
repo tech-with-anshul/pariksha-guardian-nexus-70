@@ -1,11 +1,10 @@
-
-import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserRole, User } from "@/context/AuthContext";
+import { User, UserRole } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
 
 interface UserFormProps {
   role: UserRole;
@@ -46,6 +45,18 @@ const AVAILABLE_PERMISSIONS = {
     { id: "manage_system", label: "Manage System" },
   ],
 };
+
+const AVAILABLE_SUBJECTS = [
+  "Computer Science",
+  "Mathematics",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "History",
+  "Geography",
+  "English",
+  "Economics",
+];
 
 const UserForm = ({ role, onSubmit, onCancel, editingUser }: UserFormProps) => {
   const [formData, setFormData] = useState<UserFormData>({
