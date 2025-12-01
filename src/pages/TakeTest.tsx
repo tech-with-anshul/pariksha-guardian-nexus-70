@@ -19,6 +19,7 @@ import { backgroundAppController } from "@/utils/backgroundAppController";
 import WebcamMonitor from "@/components/WebcamMonitor";
 import { useWebcamMonitoring } from "@/hooks/useWebcamMonitoring";
 import { WebcamStatus } from "@/components/ui/webcam-status";
+import { useSupabaseTestSession } from "@/hooks/useSupabaseTestSession";
 
 const TakeTest = () => {
   const { id } = useParams();
@@ -45,6 +46,9 @@ const TakeTest = () => {
   // Simplified state - webcam handled by WebcamMonitor component
   const [lastTabSwitchTime, setLastTabSwitchTime] = useState<number | null>(null);
   const [rapidTabSwitches, setRapidTabSwitches] = useState(0);
+
+  // Supabase session for real-time monitoring
+  const supabaseSession = useSupabaseTestSession();
   
   // Test monitoring hook
   const {
@@ -67,6 +71,9 @@ const TakeTest = () => {
   // Webcam monitoring hook
   const webcamMonitoring = useWebcamMonitoring({
     onViolationThreshold: (violations) => {
+      supabaseSession.logMonitoringEvent("webcam_violation_threshold", { 
+        violation_count: violations.length 
+      });
       toast({
         title: "Test Terminated",
         description: `Test terminated due to excessive violations (${violations.length}).`,
@@ -125,36 +132,16 @@ const TakeTest = () => {
     setTest(t);
     setTimeLeft(t.duration * 60);
 
-    // Local session management
-    const SESS_KEY = "pariksha_sessions";
-    const sessions: any[] = JSON.parse(localStorage.getItem(SESS_KEY) || "[]");
-    let existing = sessions.find(s => s.test_id === t.id && s.student_id === user.id);
-
-    if (existing) {
-      setSessionId(existing.id);
-      if (existing.status === 'completed') {
-        toast({
-          title: "Test already submitted",
-          description: "You have already completed this test.",
-          variant: "destructive",
-        });
-        navigate("/student-dashboard");
-        return;
+    // Create Supabase session for real-time monitoring
+    const initSupabaseSession = async () => {
+      if (!user?.id) return;
+      const newSessionId = await supabaseSession.createSession(t.id, user.id);
+      if (newSessionId) {
+        setSessionId(newSessionId);
+        supabaseSession.logMonitoringEvent("session_started", { test_title: t.title });
       }
-      loadPreviousAnswers(existing.id);
-    } else {
-      const newSession = {
-        id: crypto.randomUUID(),
-        test_id: t.id,
-        student_id: user.id,
-        started_at: new Date().toISOString(),
-        status: 'active',
-        warnings: 0,
-      };
-      sessions.push(newSession);
-      localStorage.setItem(SESS_KEY, JSON.stringify(sessions));
-      setSessionId(newSession.id);
-    }
+    };
+    initSupabaseSession();
 
     // Load evaluations (local no-op for now)
     loadEvaluations(t.id);
@@ -222,6 +209,10 @@ const TakeTest = () => {
         const newWarningCount = warningCount + 1;
         setWarningCount(newWarningCount);
         
+        // Log to Supabase
+        supabaseSession.logMonitoringEvent("fullscreen_exit", { warning_count: newWarningCount });
+        supabaseSession.updateWarnings(newWarningCount, tabSwitchCount, newWarningCount);
+        
         toast({
           title: `Warning (${newWarningCount}/3)`,
           description: "Please return to fullscreen mode or your test may be invalidated.",
@@ -230,11 +221,6 @@ const TakeTest = () => {
         
         if (newWarningCount >= 3) {
           handleSubmit(true);
-        }
-        
-        // Update warning count in session
-        if (sessionId) {
-          updateSessionWarnings(newWarningCount);
         }
       }
     };
@@ -248,23 +234,7 @@ const TakeTest = () => {
       document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
       document.removeEventListener("mozfullscreenchange", handleFullscreenChange);
     };
-  }, [test, warningCount, toast, sessionId]);
-
-  // Update session warnings (local)
-  const updateSessionWarnings = async (count: number) => {
-    if (!sessionId) return;
-    try {
-      const SESS_KEY = "pariksha_sessions";
-      const sessions: any[] = JSON.parse(localStorage.getItem(SESS_KEY) || "[]");
-      const idx = sessions.findIndex(s => s.id === sessionId);
-      if (idx !== -1) {
-        sessions[idx].warnings = count;
-        localStorage.setItem(SESS_KEY, JSON.stringify(sessions));
-      }
-    } catch (error) {
-      console.error("Error updating session warnings (local):", error);
-    }
-  };
+  }, [test, warningCount, toast, tabSwitchCount, supabaseSession]);
 
   // Monitoring integration
   useEffect(() => {
@@ -287,6 +257,10 @@ const TakeTest = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && test && isFullscreen) {
+        // Log tab switch to Supabase
+        supabaseSession.logMonitoringEvent("tab_switch", { reason: "visibility_hidden" });
+        supabaseSession.updateWarnings(warningCount + 1, tabSwitchCount + 1, warningCount);
+        
         // Immediate termination on any tab switch during test
         toast({
           title: "Test Terminated",
@@ -307,6 +281,9 @@ const TakeTest = () => {
 
     const handleBlur = () => {
       if (test && isFullscreen) {
+        // Log window blur to Supabase
+        supabaseSession.logMonitoringEvent("window_blur", { reason: "focus_lost" });
+        
         toast({
           title: "Test Terminated", 
           description: "Window lost focus. Test has been automatically terminated.",
@@ -326,6 +303,7 @@ const TakeTest = () => {
           (e.ctrlKey && e.shiftKey && e.key === 'T')
         ) {
           e.preventDefault();
+          supabaseSession.logMonitoringEvent("blocked_shortcut", { key: e.key });
           toast({
             title: "Action Blocked",
             description: "This action is not allowed during the test.",
@@ -356,7 +334,7 @@ const TakeTest = () => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [test, isFullscreen, toast, sessionId]);
+  }, [test, isFullscreen, toast, supabaseSession, warningCount, tabSwitchCount]);
 
   // Handle when multiple people are detected (now handled by WebcamMonitor)
   const handleMultiplePeopleDetected = (count: number) => {
@@ -484,6 +462,7 @@ const TakeTest = () => {
     try {
       // Stop monitoring
       stopMonitoring();
+      webcamMonitoring.stopMonitoring();
       
       // Clean up any object URLs to avoid memory leaks
       Object.values(imagePreviewUrls).forEach(url => {
@@ -492,16 +471,9 @@ const TakeTest = () => {
         }
       });
       
-      if (sessionId) {
-        const SESS_KEY = "pariksha_sessions";
-        const sessions: any[] = JSON.parse(localStorage.getItem(SESS_KEY) || "[]");
-        const idx = sessions.findIndex(s => s.id === sessionId);
-        if (idx !== -1) {
-          sessions[idx].status = forced ? 'terminated' : 'completed';
-          sessions[idx].ended_at = new Date().toISOString();
-          localStorage.setItem(SESS_KEY, JSON.stringify(sessions));
-        }
-      }
+      // Update Supabase session status
+      const status = forced ? "terminated" : "submitted";
+      await supabaseSession.updateStatus(status);
       
       navigate("/student-dashboard");
       toast({
