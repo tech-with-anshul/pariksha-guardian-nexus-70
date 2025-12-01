@@ -1,25 +1,24 @@
-import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
-import { Card, CardContent } from "@/components/ui/card";
+import ThreeDBackground from "@/components/3d/ThreeDBackground";
+import { TestIDVerification } from "@/components/TestIDVerification";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { useTest } from "@/context/TestContext";
-import { FullscreenIcon, Timer, Eye, FileImage, Camera, TabletSmartphone, AlertTriangle } from "lucide-react";
-import ThreeDBackground from "@/components/3d/ThreeDBackground";
-import { TestIDVerification } from "@/components/TestIDVerification";
+import { motion } from "framer-motion";
+import { AlertTriangle, Eye, FileImage, FullscreenIcon, TabletSmartphone, Timer } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
-import { detectPose, detectPeople, saveImage } from "@/model";
-import { useTestMonitoring } from "@/hooks/useTestMonitoring";
-import TestMonitoringStatus from "@/components/TestMonitoringStatus";
 import BackgroundAppManager from "@/components/BackgroundAppManager";
-import { backgroundAppController } from "@/utils/backgroundAppController";
-import WebcamMonitor from "@/components/WebcamMonitor";
-import { useWebcamMonitoring } from "@/hooks/useWebcamMonitoring";
+import SoundMonitor from "@/components/SoundMonitor";
+import { Badge } from "@/components/ui/badge";
 import { WebcamStatus } from "@/components/ui/webcam-status";
+import WebcamMonitor from "@/components/WebcamMonitor";
 import { useSupabaseTestSession } from "@/hooks/useSupabaseTestSession";
+import { useTestMonitoring } from "@/hooks/useTestMonitoring";
+import { useWebcamMonitoring } from "@/hooks/useWebcamMonitoring";
 
 const TakeTest = () => {
   const { id } = useParams();
@@ -906,6 +905,35 @@ const TakeTest = () => {
               >
                 Next
               </Button>
+            </div>
+
+            {/* Sound Monitor - Add this after WebcamMonitor */}
+            <div className="fixed bottom-4 right-4 z-50 w-80">
+              <SoundMonitor
+                onHighVolumeDetected={handleHighVolumeDetected}
+                onSoundLevelChange={handleSoundLevelChange}
+                threshold={70}
+                enabled={isFullscreen && testIdVerified}
+              />
+              
+              {/* Sound Alerts Summary */}
+              {soundAlerts > 0 && (
+                <Card className="mt-2 bg-card/95 backdrop-blur-sm border-red-500/30">
+                  <CardContent className="p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-red-500">Sound Violations</span>
+                      <Badge variant="destructive">{soundAlerts}</Badge>
+                    </div>
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
+                      {soundLogs.slice(-3).reverse().map((log, index) => (
+                        <div key={index} className="text-xs text-muted-foreground">
+                          {log.time} - {log.level}%
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </motion.div>
         )}

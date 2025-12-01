@@ -30,15 +30,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const AVAILABLE_SUBJECTS = [
-  "Computer Science",
-  "Mathematics",
-  "Physics",
-  "Chemistry",
-  "Biology",
-  "History",
-  "Geography",
-  "English",
-  "Economics",
+  "Software Engineering",
+  "Cloud Computing Technologies",
+  "Compiler Design",
+  "Introduction to Machine Learning",
+  "IOT Application and Communication",
+  "Object Oriented Analysis and Design",
+  "Data Warehousing and Data Mining",
+  "Mobile & Ad hoc Computing",
+  "Full Stack Development",
+  "Micro Processor & Embedded Systems",
+  "Introduction to IOT & Block Chain",
 ];
 
 const CODING_LANGUAGES = [

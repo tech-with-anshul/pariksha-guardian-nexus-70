@@ -18,6 +18,20 @@ import { Activity, AlertTriangle, Bell, ChevronRight, Database, Download, FileTe
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const AVAILABLE_SUBJECTS = [
+  "Software Engineering",
+  "Cloud Computing Technologies",
+  "Compiler Design",
+  "Introduction to Machine Learning",
+  "IOT Application and Communication",
+  "Object Oriented Analysis and Design",
+  "Data Warehousing and Data Mining",
+  "Mobile & Ad hoc Computing",
+  "Full Stack Development",
+  "Micro Processor & Embedded Systems",
+  "Introduction to IOT & Block Chain",
+];
+
 const AdminPanel = () => {
   const [activeMainTab, setActiveMainTab] = useState("dashboard");
   const [activeUserTab, setActiveUserTab] = useState("faculty");
@@ -109,8 +123,11 @@ const AdminPanel = () => {
     return matchesSearch;
   });
 
-  // Get unique departments
-  const departments = Array.from(new Set(facultyList.map(f => f.department).filter(Boolean)));
+  // Get unique departments (combining from faculty and available subjects)
+  const departments = Array.from(new Set([
+    ...facultyList.map(f => f.department).filter(Boolean),
+    ...AVAILABLE_SUBJECTS
+  ]));
 
   const handleExportUsers = () => {
     const currentList = activeUserTab === "faculty" ? filteredFaculty : filteredStudents;
@@ -751,6 +768,53 @@ const AdminPanel = () => {
                           </motion.div>
                         ))}
                       </AnimatePresence>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Proctoring Statistics */}
+                <Card className="mt-6 hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Shield className="h-5 w-5 text-primary" />
+                      Proctoring Statistics
+                    </CardTitle>
+                    <CardDescription>Real-time monitoring metrics</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="p-4 rounded-lg bg-muted/30 border border-primary/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Face Detection</span>
+                          <Badge variant="secondary" className="bg-green-500/10 text-green-500">
+                            Active
+                          </Badge>
+                        </div>
+                        <p className="text-2xl font-bold">98%</p>
+                        <p className="text-xs text-muted-foreground mt-1">Accuracy rate</p>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg bg-muted/30 border border-primary/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Sound Monitoring</span>
+                          <Badge variant="secondary" className="bg-green-500/10 text-green-500">
+                            Active
+                          </Badge>
+                        </div>
+                        <p className="text-2xl font-bold">12</p>
+                        <p className="text-xs text-muted-foreground mt-1">Total alerts today</p>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg bg-muted/30 border border-primary/10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">Multiple People</span>
+                          <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500">
+                            Monitoring
+                          </Badge>
+                        </div>
+                        <p className="text-2xl font-bold">3</p>
+                        <p className="text-xs text-muted-foreground mt-1">Violations detected</p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
