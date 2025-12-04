@@ -1,139 +1,269 @@
-# Model Documentation
+<div align="center">
 
-This folder contains AI/ML model implementations for the Pariksha Guardian Nexus proctoring system. The models work together to detect and analyze student behavior during online examinations.
+# 🎓 Pariksha Guardian Nexus - AI Model Documentation
 
-## Overview
+### *Intelligent Exam Proctoring with Computer Vision & Deep Learning*
 
-The system implements a multi-model architecture for real-time exam proctoring with the following capabilities:
-- Face detection and tracking
-- Facial landmark detection (68 points)
-- Head pose estimation and gaze direction analysis
-- Multiple person detection
-- Real-time behavior classification
+[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-orange.svg)](https://tensorflow.org/)
+[![OpenCV](https://img.shields.io/badge/OpenCV-4.x-green.svg)](https://opencv.org/)
+[![Flask](https://img.shields.io/badge/Flask-2.x-black.svg)](https://flask.palletsprojects.com/)
 
-## Architecture & Algorithms
+</div>
 
-### 1. Face Detection (`FaceDetector` class)
-**Algorithm**: Single Shot MultiBox Detector (SSD) with ResNet-10 backbone
+---
 
-**Model Details**:
-- Framework: OpenCV DNN module with Caffe models
-- Input: 300×300 RGB images
-- Model: `res10_300x300_ssd_iter_140000.caffemodel`
-- Configuration: `deploy.prototxt`
-- Output: Bounding boxes with confidence scores
+## 📋 Table of Contents
 
-**Process**:
-1. Converts input image to blob (300×300, mean subtraction: [104.0, 177.0, 123.0])
-2. Runs forward pass through the SSD network
-3. Filters detections by confidence threshold (default: 0.5)
-4. Returns face bounding boxes and confidence scores
+- [Overview](#-overview)
+- [Architecture & Algorithms](#-architecture--algorithms)
+- [Project Structure](#-project-structure)
+- [API Endpoints](#-api-endpoints)
+- [Dependencies](#-dependencies)
+- [Quick Start](#-quick-start)
+- [Performance Metrics](#-performance-metrics)
+- [Proctoring Logic](#-proctoring-logic)
+- [Future Enhancements](#-future-enhancements)
 
-### 2. Facial Landmark Detection (`MarkDetector` class)
-**Algorithm**: Convolutional Neural Network (CNN) for facial landmark regression
+---
 
-**Model Details**:
-- Framework: TensorFlow/Keras
-- Model path: `assets/pose_model`
-- Input: 128×128 RGB face images
-- Output: 68 facial landmark coordinates (x, y)
+## 🎯 Overview
 
-**Key Features**:
-- Detects 68 facial landmarks including eyes, nose, mouth, and jaw contours
-- Uses face detection as preprocessing step
-- Applies geometric transformations for robust detection:
-  - Box offset adjustment (12% downward movement)
-  - Square box expansion for consistent input
-  - Boundary validation
+The **Pariksha Guardian Nexus** implements a sophisticated **multi-model AI architecture** for real-time exam proctoring, combining state-of-the-art computer vision algorithms to ensure academic integrity.
 
-**Process**:
-1. Extracts face region using `FaceDetector`
-2. Applies box adjustments and square transformation
-3. Resizes face to 128×128 pixels
-4. Runs CNN inference to predict 68 (x, y) landmark coordinates
-5. Transforms coordinates back to original image space
+### ✨ Core Capabilities
 
-### 3. Head Pose Estimation (`PoseEstimator` class)
-**Algorithm**: Perspective-n-Point (PnP) algorithm with 3D-2D correspondence
+<table>
+<tr>
+<td width="50%">
 
-**Model Details**:
-- Method: `cv2.solvePnP` with iterative refinement
-- 3D Model: 68-point facial model loaded from `assets/model.txt`
-- Camera Model: Pinhole camera with focal length calibration
+🔍 **Face Detection & Tracking**
+- Real-time face localization
+- High accuracy detection
 
-**Process**:
-1. Uses 68 2D facial landmarks from `MarkDetector`
-2. Matches with corresponding 3D model points
-3. Solves PnP problem to estimate rotation and translation vectors
-4. Calculates Euler angles (pitch, yaw, roll) using Rodrigues transformation
-5. Applies `cv2.RQDecomp3x3` for rotation matrix decomposition
+</td>
+<td width="50%">
 
-**Pose Classification Thresholds**:
-- **Pitch** (up/down):
-  - Looking up: < -15°
-  - Looking down: > 15°
-- **Yaw** (left/right):
-  - Looking left: < -20°
-  - Looking right: > 20°
-- **Looking straight**: |pitch| < 10° AND |yaw| < 10°
+📍 **68-Point Facial Landmarks**
+- Precise feature extraction
+- Sub-pixel accuracy
 
-**Rotation Vectors**:
-- Rotation vector: 3×1 matrix in axis-angle representation
-- Translation vector: 3×1 matrix for camera position
-- Uses previous frame estimation as initial guess for stability
+</td>
+</tr>
+<tr>
+<td width="50%">
 
-### 4. Multiple Person Detection
-**Algorithm**: EfficientDet D0
+🧭 **Head Pose Estimation**
+- 3D orientation tracking
+- Gaze direction analysis
 
-**Model Details**:
-- Framework: TensorFlow Hub
-- Model: `tensorflow/efficientdet/d0/1`
-- Object Detection: COCO dataset trained (80 classes)
-- Person class ID: 1
+</td>
+<td width="50%">
 
-**Process**:
-1. Loads pre-trained EfficientDet D0 model from TensorFlow Hub
-2. Performs object detection on full image
-3. Filters detections for "person" class (ID = 1)
-4. Applies confidence threshold (0.5)
-5. Counts number of detected persons
+👥 **Multiple Person Detection**
+- Unauthorized presence detection
+- COCO dataset trained
 
-## Structure
+</td>
+</tr>
+</table>
+
+---
+
+## 🧠 Architecture & Algorithms
+
+### 1️⃣ Face Detection Module
+
+<details>
+<summary><b>📸 Click to expand: SSD-based Face Detector</b></summary>
+
+#### **Algorithm**: Single Shot MultiBox Detector (SSD) with ResNet-10 backbone
+
+**🔧 Model Specifications:**
+| Parameter | Value |
+|-----------|-------|
+| Framework | OpenCV DNN (Caffe) |
+| Input Size | 300×300 RGB |
+| Model File | `res10_300x300_ssd_iter_140000.caffemodel` |
+| Config File | `deploy.prototxt` |
+| Confidence Threshold | 0.5 (default) |
+
+**🔄 Processing Pipeline:**
+
+```mermaid
+graph LR
+    A[Input Image] --> B[Blob Conversion<br/>300×300]
+    B --> C[Mean Subtraction<br/>[104, 177, 123]]
+    C --> D[SSD Forward Pass]
+    D --> E[Confidence Filtering]
+    E --> F[Bounding Boxes]
+```
+
+**⚡ Key Features:**
+- Mean subtraction: `[104.0, 177.0, 123.0]`
+- Returns bounding boxes with confidence scores
+- Real-time processing capability
+
+</details>
+
+---
+
+### 2️⃣ Facial Landmark Detection
+
+<details>
+<summary><b>🎯 Click to expand: CNN-based Landmark Detector</b></summary>
+
+#### **Algorithm**: Convolutional Neural Network for Facial Landmark Regression
+
+**🔧 Model Specifications:**
+| Parameter | Value |
+|-----------|-------|
+| Framework | TensorFlow/Keras |
+| Model Path | `assets/pose_model` |
+| Input Size | 128×128 RGB |
+| Output | 68 (x, y) coordinates |
+
+**🎨 Landmark Distribution:**
+
+```
+    👁️ Eyes: Points 36-47 (12 points)
+    👃 Nose: Points 27-35 (9 points)
+    👄 Mouth: Points 48-67 (20 points)
+    🎭 Jawline: Points 0-16 (17 points)
+    👂 Eyebrows: Points 17-26 (10 points)
+```
+
+**🔄 Processing Pipeline:**
+
+1. 🔍 Extract face region using `FaceDetector`
+2. 📐 Apply geometric transformations:
+   - ⬇️ Box offset (12% downward)
+   - ⬛ Square box expansion
+   - ✅ Boundary validation
+3. 📏 Resize to 128×128 pixels
+4. 🧠 CNN inference for 68 landmarks
+5. 🔄 Transform coordinates to original space
+
+</details>
+
+---
+
+### 3️⃣ Head Pose Estimation
+
+<details>
+<summary><b>🧭 Click to expand: PnP-based Pose Estimator</b></summary>
+
+#### **Algorithm**: Perspective-n-Point (PnP) with 3D-2D Correspondence
+
+**🔧 Model Specifications:**
+| Parameter | Value |
+|-----------|-------|
+| Method | `cv2.solvePnP` (iterative) |
+| 3D Model | 68-point facial model |
+| Model File | `assets/model.txt` |
+| Camera Model | Pinhole camera |
+
+**🎯 Pose Classification Thresholds:**
+
+| Pose Direction | Angle Range | Status |
+|---------------|-------------|---------|
+| 👆 Looking Up | Pitch < -15° | ⚠️ Warning |
+| 👇 Looking Down | Pitch > 15° | ⚠️ Warning |
+| 👈 Looking Left | Yaw < -20° | ⚠️ Warning |
+| 👉 Looking Right | Yaw > 20° | ⚠️ Warning |
+| 👁️ Looking Straight | \|pitch\| < 10° AND \|yaw\| < 10° | ✅ Normal |
+
+**🔄 Processing Pipeline:**
+
+```mermaid
+graph TD
+    A[68 2D Landmarks] --> B[Load 3D Model]
+    B --> C[Solve PnP Problem]
+    C --> D[Rotation Vector<br/>3×1 matrix]
+    C --> E[Translation Vector<br/>3×1 matrix]
+    D --> F[Rodrigues Transform]
+    F --> G[Euler Angles<br/>Pitch, Yaw, Roll]
+    G --> H[cv2.RQDecomp3x3]
+    H --> I[Pose Classification]
+```
+
+**📊 Output Vectors:**
+- 🔄 **Rotation Vector**: 3×1 axis-angle representation
+- 📍 **Translation Vector**: 3×1 camera position
+- ⚙️ Uses previous frame for temporal stability
+
+</details>
+
+---
+
+### 4️⃣ Multiple Person Detection
+
+<details>
+<summary><b>👥 Click to expand: EfficientDet Detector</b></summary>
+
+#### **Algorithm**: EfficientDet D0 Object Detection
+
+**🔧 Model Specifications:**
+| Parameter | Value |
+|-----------|-------|
+| Framework | TensorFlow Hub |
+| Model | `tensorflow/efficientdet/d0/1` |
+| Dataset | COCO (80 classes) |
+| Person Class ID | 1 |
+| Confidence Threshold | 0.5 |
+
+**🔄 Detection Process:**
+
+1. 📥 Load pre-trained EfficientDet D0
+2. 🔍 Full image object detection
+3. 🎯 Filter for "person" class (ID=1)
+4. ✂️ Apply confidence threshold
+5. 🔢 Count detected persons
+
+</details>
+
+---
+
+## 📁 Project Structure
 
 ```
 model/
-├── assets/              # Model files and configurations
-│   ├── deploy.prototxt  # SSD face detector configuration
-│   ├── res10_300x300_ssd_iter_140000.caffemodel  # SSD weights
-│   ├── pose_model/      # CNN landmark detection model
-│   └── model.txt        # 68-point 3D facial model coordinates
-├── images/              # Documentation and visualization images
-├── mark_detector.py     # Face and landmark detection implementation
-├── pose_estimator.py    # Head pose estimation implementation
-└── app.py              # Flask API server
+├── 📂 assets/                          # Model files & configurations
+│   ├── 📄 deploy.prototxt              # SSD architecture
+│   ├── 📦 res10_300x300_ssd_iter_140000.caffemodel
+│   ├── 📂 pose_model/                  # CNN landmark model
+│   └── 📄 model.txt                    # 3D facial coordinates
+├── 🖼️ images/                          # Documentation images
+├── 🐍 mark_detector.py                 # Face & landmark detection
+├── 🐍 pose_estimator.py                # Head pose estimation
+└── 🐍 app.py                           # Flask API server
 ```
 
-## API Endpoints
+---
 
-### Flask Application (`app.py`)
+## 🚀 API Endpoints
 
-#### 1. `/predict_pose` (POST)
+### REST API Server (Flask)
+
+<details>
+<summary><b>🔵 POST `/predict_pose` - Basic Pose Detection</b></summary>
+
 **Purpose**: Basic head pose detection and classification
 
-**Input**: JSON with base64 encoded image
+**📥 Request:**
 ```json
 {
-  "img": "data:image/jpeg;base64,..."
+  "img": "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
 }
 ```
 
-**Output**:
+**📤 Response:**
 ```json
 {
   "message": "face found",
   "pose": {
-    "rotation_vector": [...],
-    "translation_vector": [...]
+    "rotation_vector": [0.12, -0.05, 0.03],
+    "translation_vector": [-15.2, -10.5, -2050.1]
   },
   "head_pose": {
     "looking_up": false,
@@ -149,20 +279,39 @@ model/
 }
 ```
 
-#### 2. `/predict_pose_detailed` (POST)
-**Purpose**: Enhanced pose detection with annotated image output
+</details>
 
-**Additional Features**:
-- Visual annotations on detected face
-- Facial landmarks overlay
-- Pose angle text overlay
-- Warning indicators
-- Returns annotated image as base64
+<details>
+<summary><b>🟢 POST `/predict_pose_detailed` - Enhanced Detection with Visualization</b></summary>
 
-#### 3. `/predict_people` (POST)
-**Purpose**: Multiple person detection
+**Purpose**: Pose detection with annotated image output
 
-**Output**:
+**✨ Additional Features:**
+- 📍 Visual annotations on face
+- 🎯 Facial landmarks overlay
+- 📊 Pose angle text display
+- ⚠️ Warning indicators
+- 🖼️ Returns annotated base64 image
+
+**📤 Response:**
+```json
+{
+  "message": "face found",
+  "pose": { ... },
+  "head_pose": { ... },
+  "annotated_image": "data:image/jpeg;base64,...",
+  "warnings": ["Student is looking left"]
+}
+```
+
+</details>
+
+<details>
+<summary><b>🟣 POST `/predict_people` - Multiple Person Detection</b></summary>
+
+**Purpose**: Detect unauthorized persons in frame
+
+**📤 Response:**
 ```json
 {
   "people": 2,
@@ -170,31 +319,77 @@ model/
 }
 ```
 
-#### 4. `/save_img` (POST)
-**Purpose**: Save captured images for audit
+</details>
 
-#### 5. `/health` (GET)
-**Purpose**: System health check
+<details>
+<summary><b>🟡 POST `/save_img` - Image Audit Storage</b></summary>
 
-## Dependencies
+**Purpose**: Save captured images for compliance audit
 
-### Core Libraries
-- **TensorFlow**: Deep learning framework for CNN models
-- **TensorFlow Hub**: Pre-trained model loading (EfficientDet)
-- **OpenCV (cv2)**: Computer vision operations, DNN module, PnP solver
-- **NumPy**: Numerical computations and array operations
-- **Flask**: REST API server
-- **Matplotlib**: Image visualization and saving
+</details>
 
-### Model Files Required
-1. `deploy.prototxt` - SSD face detector architecture
-2. `res10_300x300_ssd_iter_140000.caffemodel` - SSD weights
-3. `assets/pose_model/` - Keras landmark detection model
-4. `assets/model.txt` - 3D facial landmark coordinates
+<details>
+<summary><b>🟢 GET `/health` - Health Check</b></summary>
 
-## Usage
+**Purpose**: System status verification
 
-### Initialize Models
+**📤 Response:**
+```json
+{
+  "status": "healthy",
+  "model": "loaded",
+  "endpoints": ["/predict_pose", "/predict_pose_detailed", ...]
+}
+```
+
+</details>
+
+---
+
+## 📦 Dependencies
+
+### Core Technology Stack
+
+<table>
+<tr>
+<td align="center" width="25%">
+<img src="https://img.shields.io/badge/TensorFlow-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white" />
+<br><b>Deep Learning</b>
+<br>Framework for CNN models
+</td>
+<td align="center" width="25%">
+<img src="https://img.shields.io/badge/OpenCV-5C3EE8?style=for-the-badge&logo=opencv&logoColor=white" />
+<br><b>Computer Vision</b>
+<br>DNN module, PnP solver
+</td>
+<td align="center" width="25%">
+<img src="https://img.shields.io/badge/NumPy-013243?style=for-the-badge&logo=numpy&logoColor=white" />
+<br><b>Numerical Computing</b>
+<br>Array operations
+</td>
+<td align="center" width="25%">
+<img src="https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white" />
+<br><b>REST API</b>
+<br>Server framework
+</td>
+</tr>
+</table>
+
+### 📋 Required Model Files
+
+| File | Purpose |
+|------|---------|
+| `deploy.prototxt` | SSD architecture definition |
+| `res10_300x300_ssd_iter_140000.caffemodel` | Pre-trained SSD weights |
+| `assets/pose_model/` | Keras landmark detection model |
+| `assets/model.txt` | 3D facial landmark coordinates |
+
+---
+
+## ⚡ Quick Start
+
+### 🔧 Initialize Models
+
 ```python
 from mark_detector import MarkDetector, FaceDetector
 from pose_estimator import PoseEstimator
@@ -213,47 +408,131 @@ marks = mark_detector.detect_marks(face_image)
 rotation_vector, translation_vector = pose_estimator.solve_pose_by_68_points(marks)
 ```
 
-### Run Flask Server
+### 🚀 Run Flask Server
+
 ```bash
 python app.py
-# Server runs on http://0.0.0.0:8080
+# 🌐 Server runs on http://0.0.0.0:8080
 ```
 
-## Algorithm Performance Characteristics
+---
 
-### Face Detection
-- **Speed**: Real-time capable (~30-50ms per frame)
-- **Accuracy**: High precision with 0.9 confidence threshold
-- **Limitations**: May struggle with extreme lighting, occlusions, or side profiles
+## 📊 Performance Metrics
 
-### Landmark Detection
-- **Speed**: Fast inference (~10-20ms on CPU)
-- **Accuracy**: Sub-pixel precision for frontal faces
-- **Robustness**: Requires good face detection as preprocessing
+<table>
+<tr>
+<th>Algorithm</th>
+<th>Speed</th>
+<th>Accuracy</th>
+<th>Notes</th>
+</tr>
+<tr>
+<td><b>🔍 Face Detection</b></td>
+<td>⚡ 30-50ms</td>
+<td>🎯 High (0.9 threshold)</td>
+<td>⚠️ Struggles with extreme lighting</td>
+</tr>
+<tr>
+<td><b>📍 Landmark Detection</b></td>
+<td>⚡ 10-20ms</td>
+<td>🎯 Sub-pixel precision</td>
+<td>✅ Requires good face detection</td>
+</tr>
+<tr>
+<td><b>🧭 Pose Estimation</b></td>
+<td>⚡ 5-10ms</td>
+<td>🎯 ±5-10° error</td>
+<td>🔄 Temporal smoothing enabled</td>
+</tr>
+<tr>
+<td><b>👥 Person Detection</b></td>
+<td>⚡ 100-200ms</td>
+<td>🎯 mAP ~34%</td>
+<td>📊 COCO dataset performance</td>
+</tr>
+</table>
 
-### Pose Estimation
-- **Speed**: Near real-time (~5-10ms)
-- **Accuracy**: ±5-10° typical error for pitch/yaw
-- **Stability**: Uses temporal smoothing with previous frame initialization
+---
 
-### Person Detection
-- **Speed**: Moderate (~100-200ms per frame)
-- **Accuracy**: COCO dataset performance (mAP ~34%)
-- **Use Case**: Detecting multiple people in frame
+## 🚨 Proctoring Logic
 
-## Proctoring Logic
+### Suspicious Behavior Detection
 
-The system flags suspicious behavior when:
-1. **No face detected**: Student may have left seat
-2. **Looking up**: Potential ceiling reference material
-3. **Looking down**: Possible notes or phone
-4. **Looking left/right**: Potential unauthorized collaboration or reference
-5. **Multiple people**: Unauthorized assistance detected
+<table>
+<tr>
+<td width="50%">
 
-## Future Enhancements
+#### ⚠️ Warning Triggers
 
-- Add eye gaze tracking for more precise attention monitoring
-- Implement audio analysis for suspicious sounds
-- Add object detection for phones, books, or unauthorized materials
-- Implement temporal behavior pattern analysis
-- Add emotion recognition for stress detection
+| Behavior | Detection Method |
+|----------|------------------|
+| ❌ **No Face** | Face detection fails |
+| 👆 **Looking Up** | Ceiling reference check |
+| 👇 **Looking Down** | Notes/phone detection |
+| 👈👉 **Looking Sideways** | Collaboration detection |
+| 👥 **Multiple People** | Unauthorized assistance |
+
+</td>
+<td width="50%">
+
+#### ✅ Normal Behavior
+
+```
+┌─────────────────────┐
+│                     │
+│    👁️ Straight     │
+│   Gaze Forward      │
+│                     │
+│  |Pitch| < 10°      │
+│  |Yaw| < 10°        │
+│                     │
+└─────────────────────┘
+```
+
+</td>
+</tr>
+</table>
+
+---
+
+## 🔮 Future Enhancements
+
+<div align="center">
+
+### 🎯 Roadmap
+
+```mermaid
+graph LR
+    A[Current System] --> B[Eye Gaze Tracking]
+    A --> C[Audio Analysis]
+    A --> D[Object Detection]
+    A --> E[Behavior Patterns]
+    A --> F[Emotion Recognition]
+    
+    B --> G[Enhanced Monitoring]
+    C --> G
+    D --> G
+    E --> G
+    F --> G
+```
+
+</div>
+
+| Feature | Description | Status |
+|---------|-------------|--------|
+| 👁️ **Eye Gaze Tracking** | Precise attention monitoring | 🔜 Planned |
+| 🔊 **Audio Analysis** | Suspicious sound detection | 🔜 Planned |
+| 📱 **Object Detection** | Phone, books, materials | 🔜 Planned |
+| 📈 **Temporal Analysis** | Behavior pattern tracking | 🔜 Planned |
+| 😊 **Emotion Recognition** | Stress detection | 🔜 Planned |
+
+---
+
+<div align="center">
+
+### 💡 Built with ❤️ for Academic Integrity
+
+**Made with cutting-edge AI/ML technologies**
+
+[![GitHub](https://img.shields.io/badge/GitHub-Repository-black?style=for-the-badge&logo=github)](https://github.com)
+[![Documentation](https://img.shields.io/badge/Documentation-Complete-green?style=for-the-badge&logo=readthedocs)](.)
