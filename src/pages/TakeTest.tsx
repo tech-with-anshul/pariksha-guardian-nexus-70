@@ -540,13 +540,13 @@ const TakeTest = () => {
   return (
     <>
       <ThreeDBackground />
-      <div className="min-h-screen p-4 relative z-10">
+      <div className="min-h-screen p-2 sm:p-4 md:p-6 relative z-10">
         {!systemReady ? (
           <div className="flex items-center justify-center h-screen">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="w-full max-w-4xl mx-auto"
+              className="w-full max-w-4xl mx-auto px-4"
             >
               <BackgroundAppManager
                 onSystemReady={handleSystemReady}
@@ -555,7 +555,7 @@ const TakeTest = () => {
               
               {systemWarnings.length > 0 && (
                 <Card className="mt-6 bg-card/90 backdrop-blur-md border-destructive/20">
-                  <CardContent className="p-6">
+                  <CardContent className="p-4 sm:p-6">
                     <div className="space-y-4">
                       <h3 className="font-semibold text-destructive">Issues that need attention:</h3>
                       <ul className="space-y-2">
@@ -566,19 +566,21 @@ const TakeTest = () => {
                           </li>
                         ))}
                       </ul>
-                      <div className="flex gap-4">
+                      <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
                         <Button 
                           onClick={() => {
                             setSystemReady(false);
                             setSystemWarnings([]);
                           }}
                           variant="outline"
+                          className="w-full sm:w-auto"
                         >
                           Try Again
                         </Button>
                         <Button 
                           onClick={() => setSystemReady(true)}
                           variant="destructive"
+                          className="w-full sm:w-auto"
                         >
                           Proceed Anyway (Not Recommended)
                         </Button>
@@ -603,17 +605,17 @@ const TakeTest = () => {
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="text-center max-w-md mx-auto"
+              className="text-center max-w-md mx-auto px-4"
             >
               <Card className="bg-card/90 backdrop-blur-md border-primary/20">
-                <CardContent className="p-6">
-                  <h2 className="text-2xl font-bold mb-4">{test.title}</h2>
+                <CardContent className="p-4 sm:p-6">
+                  <h2 className="text-xl sm:text-2xl font-bold mb-4">{test.title}</h2>
                   {test.unique_id && (
                     <p className="text-sm bg-primary/10 text-primary inline-block px-2 py-1 rounded mb-4">
                       Test ID: {test.unique_id}
                     </p>
                   )}
-                  <p className="mb-6">
+                  <p className="mb-6 text-sm sm:text-base">
                     This test requires fullscreen mode with advanced monitoring. 
                     Exiting fullscreen or switching tabs will result in warnings and potential test termination.
                   </p>
@@ -623,7 +625,7 @@ const TakeTest = () => {
                       className="flex items-center gap-2"
                     >
                       <FullscreenIcon className="h-5 w-5" />
-                      Enter Fullscreen & Start Monitoring
+                      <span className="truncate">Enter Fullscreen & Start Monitoring</span>
                     </Button>
                     <Button 
                       variant="outline" 
@@ -647,7 +649,7 @@ const TakeTest = () => {
             </motion.div>
           </div>
         ) : !testIdVerified ? (
-          <div className="flex items-center justify-center h-screen">
+          <div className="flex items-center justify-center h-screen px-4">
             <TestIDVerification 
               expectedTestId={test.unique_id || ''} 
               onSuccess={() => {
@@ -664,10 +666,10 @@ const TakeTest = () => {
           <motion.div 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="container mx-auto py-6"
+            className="container mx-auto py-3 sm:py-6 px-2 sm:px-4"
           >
             {/* Monitoring status */}
-            <div className="mb-4">
+            <div className="mb-3 sm:mb-4">
               <WebcamStatus
                 isActive={webcamMonitoring.isMonitoring}
                 peopleCount={webcamMonitoring.status.peopleCount}
@@ -685,41 +687,45 @@ const TakeTest = () => {
             />
 
             {/* Test header */}
-            <div className="flex justify-between items-center mb-6">
+            <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 sm:mb-6 gap-3">
               <div>
-                <h1 className="text-3xl font-bold">{test.title}</h1>
-                <div className="flex gap-2 items-center">
-                  <p className="text-muted-foreground">{test.subject}</p>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold truncate max-w-[280px] sm:max-w-none">{test.title}</h1>
+                <div className="flex flex-wrap gap-2 items-center mt-1">
+                  <p className="text-sm sm:text-base text-muted-foreground">{test.subject}</p>
                   {test.unique_id && (
-                    <p className="text-sm bg-primary/10 text-primary px-2 py-0.5 rounded">
+                    <p className="text-xs sm:text-sm bg-primary/10 text-primary px-2 py-0.5 rounded truncate max-w-[120px] sm:max-w-none">
                       ID: {test.unique_id}
                     </p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 bg-primary/20 text-primary p-2 rounded-md">
-                  <Timer className="h-5 w-5" />
-                  {timeLeft !== null ? formatTime(timeLeft) : "00:00"}
+              <div className="grid grid-cols-2 sm:flex items-center gap-2 w-full lg:w-auto">
+                <div className="flex items-center gap-1 sm:gap-2 bg-primary/20 text-primary px-2 py-1.5 sm:p-2 rounded-md text-xs sm:text-sm">
+                  <Timer className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span className="font-mono">{timeLeft !== null ? formatTime(timeLeft) : "00:00"}</span>
                 </div>
-                <div className="flex items-center gap-2 bg-primary/20 text-primary p-2 rounded-md">
-                  <AlertTriangle className="h-5 w-5" />
-                  Total Violations: {totalViolations}/9
+                <div className="flex items-center gap-1 sm:gap-2 bg-primary/20 text-primary px-2 py-1.5 sm:p-2 rounded-md text-xs sm:text-sm">
+                  <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Total Violations:</span>
+                  <span className="sm:hidden">Violations:</span>
+                  <span className="font-semibold">{totalViolations}/9</span>
                 </div>
-                <div className="flex items-center gap-2 bg-primary/20 text-primary p-2 rounded-md">
-                  <Eye className="h-5 w-5" />
-                  Warnings: {warningCount}/3
+                <div className="flex items-center gap-1 sm:gap-2 bg-primary/20 text-primary px-2 py-1.5 sm:p-2 rounded-md text-xs sm:text-sm">
+                  <Eye className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Warnings:</span>
+                  <span className="font-semibold">{warningCount}/3</span>
                 </div>
-                <div className="flex items-center gap-2 bg-primary/20 text-primary p-2 rounded-md">
-                  <TabletSmartphone className="h-5 w-5" />
-                  Tab Shifts: {rapidTabSwitches}/3
+                <div className="flex items-center gap-1 sm:gap-2 bg-primary/20 text-primary px-2 py-1.5 sm:p-2 rounded-md text-xs sm:text-sm">
+                  <TabletSmartphone className="h-4 w-4 sm:h-5 sm:w-5 flex-shrink-0" />
+                  <span className="hidden sm:inline">Tab Shifts:</span>
+                  <span className="font-semibold">{rapidTabSwitches}/3</span>
                 </div>
               </div>
             </div>
             
             {/* Question card */}
-            <Card className="bg-card/90 backdrop-blur-md border-primary/20 mb-6">
-              <CardContent className="p-6">
+            <Card className="bg-card/90 backdrop-blur-md border-primary/20 mb-4 sm:mb-6">
+              <CardContent className="p-4 sm:p-6">
                 {currentQuestion ? (
                   <div className="space-y-6">
                     <div>
@@ -753,7 +759,7 @@ const TakeTest = () => {
                         </div>
                       )}
                       
-                      <h3 className="text-xl font-semibold mb-4">{currentQuestion.text}</h3>
+                      <h3 className="text-lg sm:text-xl font-semibold mb-4">{currentQuestion.text}</h3>
                       
                       {/* MCQ Question */}
                       {currentQuestion.type === "mcq" && currentQuestion.options && (
@@ -762,7 +768,7 @@ const TakeTest = () => {
                             <div 
                               key={index}
                               onClick={() => handleAnswerChange(currentQuestion.id, option)}
-                              className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              className={`p-2.5 sm:p-3 border rounded-lg cursor-pointer transition-colors text-sm sm:text-base ${
                                 answers[currentQuestion.id] === option 
                                   ? "border-primary bg-primary/10" 
                                   : "border-border hover:border-primary/50"
@@ -779,7 +785,7 @@ const TakeTest = () => {
                         <div className="flex gap-3">
                           <div 
                             onClick={() => handleAnswerChange(currentQuestion.id, true)}
-                            className={`p-3 border rounded-lg cursor-pointer transition-colors flex-1 text-center ${
+                            className={`p-2.5 sm:p-3 border rounded-lg cursor-pointer transition-colors flex-1 text-center text-sm sm:text-base ${
                               answers[currentQuestion.id] === true 
                                 ? "border-primary bg-primary/10" 
                                 : "border-border hover:border-primary/50"
@@ -789,7 +795,7 @@ const TakeTest = () => {
                           </div>
                           <div 
                             onClick={() => handleAnswerChange(currentQuestion.id, false)}
-                            className={`p-3 border rounded-lg cursor-pointer transition-colors flex-1 text-center ${
+                            className={`p-2.5 sm:p-3 border rounded-lg cursor-pointer transition-colors flex-1 text-center text-sm sm:text-base ${
                               answers[currentQuestion.id] === false 
                                 ? "border-primary bg-primary/10" 
                                 : "border-border hover:border-primary/50"
@@ -803,7 +809,7 @@ const TakeTest = () => {
                       {/* Essay Question */}
                       {currentQuestion.type === "essay" && (
                         <textarea
-                          className="w-full p-3 border rounded-lg h-36 bg-background"
+                          className="w-full p-2.5 sm:p-3 border rounded-lg h-32 sm:h-36 bg-background text-sm sm:text-base"
                           value={answers[currentQuestion.id] as string || ""}
                           onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                           placeholder="Type your answer here..."
@@ -814,7 +820,7 @@ const TakeTest = () => {
                       {currentQuestion.type === "short" && (
                         <div className="space-y-2">
                           <Input
-                            className="w-full"
+                            className="w-full text-sm sm:text-base"
                             value={answers[currentQuestion.id] as string || ""}
                             onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                             placeholder={currentQuestion.answerHint || "Type your answer here..."}
@@ -831,7 +837,7 @@ const TakeTest = () => {
                       {currentQuestion.type === "long" && (
                         <div className="space-y-2">
                           <textarea
-                            className="w-full p-3 border rounded-lg h-64 bg-background"
+                            className="w-full p-2.5 sm:p-3 border rounded-lg h-48 sm:h-64 bg-background text-sm sm:text-base"
                             value={answers[currentQuestion.id] as string || ""}
                             onChange={(e) => handleAnswerChange(currentQuestion.id, e.target.value)}
                             placeholder={currentQuestion.answerHint || "Type your detailed answer here..."}
@@ -858,6 +864,7 @@ const TakeTest = () => {
                               </div>
                               <Button
                                 variant="outline"
+                                className="w-full sm:w-auto"
                                 onClick={() => {
                                   // Clear the image
                                   if (imagePreviewUrls[currentQuestion.id]) {
@@ -889,10 +896,10 @@ const TakeTest = () => {
                             <div className="space-y-2">
                               <label 
                                 htmlFor={`image-upload-${currentQuestion.id}`}
-                                className="border border-dashed rounded-lg p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
+                                className="border border-dashed rounded-lg p-6 sm:p-8 flex flex-col items-center justify-center cursor-pointer hover:bg-accent/50 transition-colors"
                               >
-                                <FileImage className="h-12 w-12 text-muted-foreground mb-4" />
-                                <p className="text-center">
+                                <FileImage className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground mb-3 sm:mb-4" />
+                                <p className="text-center text-sm sm:text-base">
                                   {currentQuestion.imagePrompt || "Click to upload an image or drag and drop"}
                                 </p>
                                 <p className="text-sm text-muted-foreground mt-2">
@@ -921,11 +928,12 @@ const TakeTest = () => {
             </Card>
             
             {/* Navigation buttons */}
-            <div className="flex justify-between">
+            <div className="flex flex-col sm:flex-row justify-between gap-2 sm:gap-0">
               <Button 
                 variant="outline" 
                 onClick={handlePreviousQuestion}
                 disabled={currentQuestionIndex === 0}
+                className="order-1 sm:order-none"
               >
                 Previous
               </Button>
@@ -934,6 +942,7 @@ const TakeTest = () => {
                 onClick={handleSubmitClick}
                 variant="destructive"
                 disabled={isSubmitting}
+                className="order-3 sm:order-none"
               >
                 {isSubmitting ? "Submitting..." : "Submit Test"}
               </Button>
@@ -941,6 +950,7 @@ const TakeTest = () => {
               <Button 
                 onClick={handleNextQuestion}
                 disabled={currentQuestionIndex === test.questions.length - 1}
+                className="order-2 sm:order-none"
               >
                 Next
               </Button>

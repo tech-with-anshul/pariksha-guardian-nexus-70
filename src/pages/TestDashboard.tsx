@@ -1,34 +1,12 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { motion, AnimatePresence } from "framer-motion";
-import { 
-  Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle 
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Copy, 
-  ArrowLeft, 
-  Users, 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle,
-  Activity,
-  Eye,
-  MonitorX,
-  TabletSmartphone,
-  Clock,
-  RefreshCw,
-  Wifi,
-  WifiOff
-} from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
-import { useTest } from "@/context/TestContext";
-import { useRealtimeTestSessions } from "@/hooks/useRealtimeTestSessions";
 import ThreeDBackground from "@/components/3d/ThreeDBackground";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -37,6 +15,28 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useToast } from "@/components/ui/use-toast";
+import { useTest } from "@/context/TestContext";
+import { useRealtimeTestSessions } from "@/hooks/useRealtimeTestSessions";
+import { AnimatePresence, motion } from "framer-motion";
+import {
+  Activity,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  Copy,
+  Eye,
+  MonitorX,
+  RefreshCw,
+  TabletSmartphone,
+  Users,
+  Wifi,
+  WifiOff,
+  XCircle
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 const TestDashboard = () => {
   const { id } = useParams<{ id: string }>();
@@ -114,16 +114,16 @@ const TestDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-6 relative overflow-hidden">
+    <div className="min-h-screen p-3 sm:p-4 md:p-6 relative overflow-hidden">
       <ThreeDBackground />
       
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between mb-6 relative z-10 gap-4"
+        className="flex flex-col md:flex-row md:items-center justify-between mb-6 relative z-10 gap-3 flex-wrap items-start"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <Button 
             variant="outline" 
             size="sm" 
@@ -132,15 +132,15 @@ const TestDashboard = () => {
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back
           </Button>
-          <div>
-            <h1 className="text-2xl font-bold">{test.title}</h1>
-            <p className="text-sm text-muted-foreground">{test.subject} • {test.duration} minutes</p>
+          <div className="min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold truncate max-w-[220px] sm:max-w-none">{test.title}</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground truncate max-w-[220px] sm:max-w-none">{test.subject} • {test.duration} minutes</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* Live Indicator */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${isLive ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
+          <div className={`flex items-center gap-2 px-2 py-1 rounded-full ${isLive ? 'bg-green-500/20' : 'bg-gray-500/20'}`}>
             {isLive ? (
               <>
                 <Wifi className="h-4 w-4 text-green-500" />
@@ -156,8 +156,8 @@ const TestDashboard = () => {
           </div>
 
           {/* Test ID */}
-          <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-3 py-1.5">
-            <span className="text-sm font-mono">{test.unique_id}</span>
+          <div className="flex items-center gap-2 bg-muted/50 rounded-lg px-2 py-1 max-w-[160px] sm:max-w-none overflow-hidden">
+            <span className="text-xs sm:text-sm font-mono truncate">{test.unique_id}</span>
             <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopyTestId}>
               <Copy className="h-3 w-3" />
             </Button>
@@ -170,7 +170,7 @@ const TestDashboard = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6 relative z-10"
+        className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4 mb-6 relative z-10"
       >
         {[
           { icon: <Users className="h-5 w-5" />, value: sessions.length, label: "Total Joined", color: "from-blue-500 to-cyan-500" },
@@ -180,12 +180,12 @@ const TestDashboard = () => {
           { icon: <AlertTriangle className="h-5 w-5" />, value: totalWarnings, label: "Total Warnings", color: "from-orange-500 to-amber-500" },
         ].map((stat, i) => (
           <Card key={i} className="bg-card/60 backdrop-blur-md border-primary/10">
-            <CardContent className="p-4">
-              <div className={`inline-flex p-2 rounded-lg bg-gradient-to-br ${stat.color} text-white mb-2`}>
+            <CardContent className="p-3 sm:p-4">
+              <div className={`inline-flex p-1.5 sm:p-2 rounded-lg bg-gradient-to-br ${stat.color} text-white mb-2`}>
                 {stat.icon}
               </div>
-              <p className="text-2xl font-bold">{stat.value}</p>
-              <p className="text-xs text-muted-foreground">{stat.label}</p>
+              <p className="text-lg sm:text-2xl font-bold">{stat.value}</p>
+              <p className="text-xs text-muted-foreground truncate">{stat.label}</p>
             </CardContent>
           </Card>
         ))}
@@ -225,11 +225,11 @@ const TestDashboard = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Student</TableHead>
+                        <TableHead className="min-w-[180px]">Student</TableHead>
                         <TableHead>Status</TableHead>
                         <TableHead>Warnings</TableHead>
-                        <TableHead>Tab Switches</TableHead>
-                        <TableHead>Started</TableHead>
+                        <TableHead className="hidden sm:table-cell">Tab Switches</TableHead>
+                        <TableHead className="hidden sm:table-cell">Started</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -245,8 +245,8 @@ const TestDashboard = () => {
                           >
                             <TableCell>
                               <div>
-                                <p className="font-medium">{session.student_name}</p>
-                                <p className="text-xs text-muted-foreground">{session.student_email}</p>
+                                <p className="font-medium truncate max-w-[160px] sm:max-w-none">{session.student_name}</p>
+                                <p className="text-xs text-muted-foreground truncate max-w-[160px] sm:max-w-none">{session.student_email}</p>
                               </div>
                             </TableCell>
                             <TableCell>{getStatusBadge(session.status)}</TableCell>
@@ -255,13 +255,13 @@ const TestDashboard = () => {
                                 {session.total_warnings}
                               </span>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden sm:table-cell">
                               <div className="flex items-center gap-1">
                                 <TabletSmartphone className="h-3 w-3" />
                                 {session.tab_switch_count}
                               </div>
                             </TableCell>
-                            <TableCell>
+                            <TableCell className="hidden sm:table-cell">
                               <div className="flex items-center gap-1 text-sm">
                                 <Clock className="h-3 w-3" />
                                 {formatTime(session.started_at)}
@@ -274,6 +274,7 @@ const TestDashboard = () => {
                                     variant="destructive" 
                                     size="sm"
                                     onClick={() => terminateStudent(session.id)}
+                                    className="text-xs"
                                   >
                                     Terminate
                                   </Button>
@@ -283,6 +284,7 @@ const TestDashboard = () => {
                                     variant="outline" 
                                     size="sm"
                                     onClick={() => allowContinue(session.id)}
+                                    className="text-xs"
                                   >
                                     Allow Continue
                                   </Button>
@@ -314,7 +316,7 @@ const TestDashboard = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3 max-h-[500px] overflow-y-auto">
+              <div className="space-y-2 sm:space-y-3 max-h-[420px] sm:max-h-[500px] overflow-y-auto">
                 {monitoringLogs.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">
                     <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
@@ -328,7 +330,7 @@ const TestDashboard = () => {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
+                        className="flex items-start gap-3 p-2 sm:p-3 rounded-lg bg-muted/50"
                       >
                         <div className={`p-1.5 rounded-md ${
                           log.event_type.includes("warning") || log.event_type.includes("violation")
@@ -346,10 +348,10 @@ const TestDashboard = () => {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium capitalize">
+                          <p className="text-xs sm:text-sm font-medium capitalize truncate">
                             {log.event_type.replace(/_/g, " ")}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-2xs sm:text-xs text-muted-foreground">
                             {new Date(log.timestamp).toLocaleTimeString()}
                           </p>
                         </div>
@@ -362,13 +364,13 @@ const TestDashboard = () => {
           </Card>
         </motion.div>
       </div>
-
+ 
       {/* High Risk Alert */}
       {highRiskStudents > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mt-6 relative z-10"
+          className="mt-4 sm:mt-6 relative z-10"
         >
           <Card className="bg-red-500/10 border-red-500/30">
             <CardContent className="p-4 flex items-center gap-4">
