@@ -199,8 +199,10 @@ const TakeTest = () => {
       }
       
       if (isWebcamDragging) {
-        const maxX = window.innerWidth - 320;
-        const maxY = window.innerHeight - 240;
+        const webcamWidth = window.innerWidth < 640 ? 180 : 240;
+        const webcamHeight = window.innerWidth < 640 ? 135 : 180;
+        const maxX = window.innerWidth - webcamWidth;
+        const maxY = window.innerHeight - webcamHeight;
         
         setWebcamPosition({
           x: Math.max(0, Math.min(maxX, e.clientX - webcamDragOffset.x)),
@@ -223,8 +225,10 @@ const TakeTest = () => {
       }
       
       if (isWebcamDragging) {
-        const maxX = window.innerWidth - 320;
-        const maxY = window.innerHeight - 240;
+        const webcamWidth = window.innerWidth < 640 ? 180 : 240;
+        const webcamHeight = window.innerWidth < 640 ? 135 : 180;
+        const maxX = window.innerWidth - webcamWidth;
+        const maxY = window.innerHeight - webcamHeight;
         
         setWebcamPosition({
           x: Math.max(0, Math.min(maxX, touch.clientX - webcamDragOffset.x)),
@@ -748,27 +752,30 @@ const TakeTest = () => {
               />
             </div>
 
-            {/* WebcamMonitor component - Draggable */}
+            {/* WebcamMonitor component - Draggable with smaller size */}
             <div
               className="fixed z-50 touch-none"
               style={{
                 left: webcamPosition.x || 'auto',
-                top: webcamPosition.y || '80px',
-                right: webcamPosition.x ? 'auto' : '1rem',
+                top: webcamPosition.y || '70px',
+                right: webcamPosition.x ? 'auto' : '0.5rem',
+                width: window.innerWidth < 640 ? '180px' : '240px',
                 cursor: isWebcamDragging ? 'grabbing' : 'grab'
               }}
               onMouseDown={handleWebcamMouseDown}
               onTouchStart={handleWebcamTouchStart}
             >
-              <div className="bg-card/95 backdrop-blur-sm border border-primary/20 rounded-lg shadow-lg overflow-hidden">
+              <div className="bg-card/95 backdrop-blur-sm border border-primary/20 rounded-lg shadow-lg overflow-hidden w-full">
                 <div className="bg-primary/10 px-3 py-1.5 border-b border-primary/20">
-                  <p className="text-xs font-medium text-center">Camera Monitor (Drag to Move)</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-center truncate">Camera (Drag)</p>
                 </div>
-                <WebcamMonitor
-                  isActive={webcamMonitoring.isMonitoring}
-                  onViolation={webcamMonitoring.addViolation}
-                  onStatusUpdate={webcamMonitoring.updateStatus}
-                />
+                <div className="w-full aspect-video relative overflow-hidden">
+                  <WebcamMonitor
+                    isActive={webcamMonitoring.isMonitoring}
+                    onViolation={webcamMonitoring.addViolation}
+                    onStatusUpdate={webcamMonitoring.updateStatus}
+                  />
+                </div>
               </div>
             </div>
 
