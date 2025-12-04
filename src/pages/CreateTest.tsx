@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/components/ui/use-toast";
 import { useAuth } from "@/context/AuthContext";
 import { Question, useTest } from "@/context/TestContext";
+import { extractTextFromFile } from "@/utils/pdfExtractor";
 import { motion } from "framer-motion";
 import {
   ArrowLeft,
@@ -163,8 +164,12 @@ const CreateTest = () => {
     setIsGenerating(true);
 
     try {
-      // Read file content
-      const text = await uploadedFile.text();
+      // Extract text from file (with PDF support)
+      toast({
+        title: "Extracting text...",
+        description: "Processing your document",
+      });
+      const text = await extractTextFromFile(uploadedFile);
       
       // Call edge function to generate questions
       const response = await fetch(
