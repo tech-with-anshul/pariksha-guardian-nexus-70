@@ -66,9 +66,9 @@ function Scene() {
 
 export default function ThreeDBackground() {
   return (
-    <div className="fixed inset-0 z-0">
+    <div className="fixed inset-0 z-0 pointer-events-none">
       <Suspense fallback={<div className="w-full h-full bg-gradient-to-r from-indigo-900 to-purple-900" />}>
-        <Canvas camera={{ position: [0, 0, 10], fov: 50 }}>
+        <Canvas camera={{ position: [0, 0, 10], fov: 50 }} style={{ pointerEvents: 'none' }}>
           <Scene />
         </Canvas>
       </Suspense>
