@@ -46,6 +46,20 @@ const TakeTest = () => {
   const [lastTabSwitchTime, setLastTabSwitchTime] = useState<number | null>(null);
   const [rapidTabSwitches, setRapidTabSwitches] = useState(0);
 
+  // Sound monitoring state
+  const [soundAlerts, setSoundAlerts] = useState<number>(0);
+  const [soundLogs, setSoundLogs] = useState<Array<{time: string, level: number}>>([]);
+
+  // Draggable state for SoundMonitor
+  const [soundMonitorPosition, setSoundMonitorPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+
+  // Draggable state for WebcamMonitor
+  const [webcamPosition, setWebcamPosition] = useState({ x: 0, y: 0 });
+  const [isWebcamDragging, setIsWebcamDragging] = useState(false);
+  const [webcamDragOffset, setWebcamDragOffset] = useState({ x: 0, y: 0 });
+
   // Supabase session for real-time monitoring
   const supabaseSession = useSupabaseTestSession();
   
@@ -63,7 +77,7 @@ const TakeTest = () => {
   } = useTestMonitoring({
     onFullscreenExit: () => handleSubmit(true),
     onTabSwitch: () => handleSubmit(true),
-    warningThreshold: 1, // Immediate termination on first violation
+    warningThreshold: 1,
     autoTerminateOnThreshold: true
   });
 
@@ -87,6 +101,70 @@ const TakeTest = () => {
   // Update existing warningCount to include webcam violations
   const totalWarningCount = warningCount + monitoringWarnings + webcamMonitoring.violationCount;
 
+  // Handle SoundMonitor dragging
+  const handleSoundMonitorMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, select')) return;
+    setIsDragging(true);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  const handleSoundMonitorTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, select')) return;
+    setIsDragging(true);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const touch = e.touches[0];
+    setDragOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+  };
+
+  // Handle WebcamMonitor dragging
+  const handleWebcamMouseDown = (e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, select')) return;
+    setIsWebcamDragging(true);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setWebcamDragOffset({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    });
+  };
+
+  const handleWebcamTouchStart = (e: React.TouchEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, select')) return;
+    setIsWebcamDragging(true);
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const touch = e.touches[0];
+    setWebcamDragOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
+  };
+
+  // Sound monitoring handlers
+  const handleHighVolumeDetected = (level: number) => {
+    setSoundAlerts(prev => prev + 1);
+    
+    const timestamp = new Date().toLocaleTimeString();
+    setSoundLogs(prev => [...prev, { time: timestamp, level }]);
+    
+    supabaseSession.logMonitoringEvent("high_volume_detected", { level, timestamp });
+    
+    toast({
+      title: "⚠️ High Volume Detected",
+      description: `Sound level: ${level}%. Please maintain silence.`,
+      variant: "destructive",
+    });
+  };
+
+  const handleSoundLevelChange = (level: number) => {
+    // Optionally log continuous sound levels if needed
+  };
+
   // System preparation handlers
   const handleSystemReady = () => {
     setSystemReady(true);
@@ -107,6 +185,74 @@ const TakeTest = () => {
     });
   };
 
+  // Handle drag movements
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isDragging) {
+        const maxX = window.innerWidth - 200;
+        const maxY = window.innerHeight - 200;
+        
+        setSoundMonitorPosition({
+          x: Math.max(0, Math.min(maxX, e.clientX - dragOffset.x)),
+          y: Math.max(0, Math.min(maxY, e.clientY - dragOffset.y))
+        });
+      }
+      
+      if (isWebcamDragging) {
+        const maxX = window.innerWidth - 320;
+        const maxY = window.innerHeight - 240;
+        
+        setWebcamPosition({
+          x: Math.max(0, Math.min(maxX, e.clientX - webcamDragOffset.x)),
+          y: Math.max(0, Math.min(maxY, e.clientY - webcamDragOffset.y))
+        });
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches[0];
+      
+      if (isDragging) {
+        const maxX = window.innerWidth - 200;
+        const maxY = window.innerHeight - 200;
+        
+        setSoundMonitorPosition({
+          x: Math.max(0, Math.min(maxX, touch.clientX - dragOffset.x)),
+          y: Math.max(0, Math.min(maxY, touch.clientY - dragOffset.y))
+        });
+      }
+      
+      if (isWebcamDragging) {
+        const maxX = window.innerWidth - 320;
+        const maxY = window.innerHeight - 240;
+        
+        setWebcamPosition({
+          x: Math.max(0, Math.min(maxX, touch.clientX - webcamDragOffset.x)),
+          y: Math.max(0, Math.min(maxY, touch.clientY - webcamDragOffset.y))
+        });
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      setIsWebcamDragging(false);
+    };
+
+    if (isDragging || isWebcamDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('touchmove', handleTouchMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchend', handleMouseUp);
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('touchend', handleMouseUp);
+    };
+  }, [isDragging, isWebcamDragging, dragOffset, webcamDragOffset]);
+
   // Redirect if not authenticated as student
   useEffect(() => {
     if (!user || user.role !== "student") {
@@ -116,7 +262,6 @@ const TakeTest = () => {
 
     if (!id) return;
 
-    // Load test from local storage/context
     const t = getTestById(id);
     if (!t || t.status !== "published") {
       navigate("/student-dashboard");
@@ -131,7 +276,6 @@ const TakeTest = () => {
     setTest(t);
     setTimeLeft(t.duration * 60);
 
-    // Create Supabase session for real-time monitoring
     const initSupabaseSession = async () => {
       if (!user?.id) return;
       const newSessionId = await supabaseSession.createSession(t.id, user.id);
@@ -142,28 +286,12 @@ const TakeTest = () => {
     };
     initSupabaseSession();
 
-    // Load evaluations (local no-op for now)
     loadEvaluations(t.id);
   }, [id, user, navigate, getTestById, toast]);
 
   // Load evaluations (local placeholder)
   const loadEvaluations = async (_testId: string) => {
     setEvaluations({});
-  };
-
-  // Load previously saved answers (local)
-  const loadPreviousAnswers = async (_testSessionId: string) => {
-    if (!user || !id) return;
-    try {
-      const answersKey = `pariksha_answers_${id}_${user.id}`;
-      const imagesKey = `pariksha_images_${id}_${user.id}`;
-      const savedAnswers = JSON.parse(localStorage.getItem(answersKey) || '{}');
-      const savedImages = JSON.parse(localStorage.getItem(imagesKey) || '{}');
-      setAnswers(savedAnswers);
-      setImagePreviewUrls(savedImages);
-    } catch (error) {
-      console.error("Error loading previous answers (local):", error);
-    }
   };
 
   // Timer effect
@@ -203,12 +331,10 @@ const TakeTest = () => {
       
       setIsFullscreen(isCurrentlyFullscreen);
       
-      // Warn if exiting fullscreen
       if (!isCurrentlyFullscreen && test) {
         const newWarningCount = warningCount + 1;
         setWarningCount(newWarningCount);
         
-        // Log to Supabase
         supabaseSession.logMonitoringEvent("fullscreen_exit", { warning_count: newWarningCount });
         supabaseSession.updateWarnings(newWarningCount, tabSwitchCount, newWarningCount);
         
@@ -235,30 +361,6 @@ const TakeTest = () => {
     };
   }, [test, warningCount, toast, tabSwitchCount, supabaseSession]);
 
-  // Sound monitoring state
-  const [soundAlerts, setSoundAlerts] = useState<number>(0);
-  const [soundLogs, setSoundLogs] = useState<Array<{time: string, level: number}>>([]);
-
-  // Sound monitoring handlers
-  const handleHighVolumeDetected = (level: number) => {
-    setSoundAlerts(prev => prev + 1);
-    
-    const timestamp = new Date().toLocaleTimeString();
-    setSoundLogs(prev => [...prev, { time: timestamp, level }]);
-    
-    supabaseSession.logMonitoringEvent("high_volume_detected", { level, timestamp });
-    
-    toast({
-      title: "⚠️ High Volume Detected",
-      description: `Sound level: ${level}%. Please maintain silence.`,
-      variant: "destructive",
-    });
-  };
-
-  const handleSoundLevelChange = (level: number) => {
-    // Optionally log continuous sound levels if needed
-  };
-
   // Monitoring integration
   useEffect(() => {
     if (test && testIdVerified && monitorFullscreen && !isMonitoring) {
@@ -280,11 +382,9 @@ const TakeTest = () => {
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'hidden' && test && isFullscreen) {
-        // Log tab switch to Supabase
         supabaseSession.logMonitoringEvent("tab_switch", { reason: "visibility_hidden" });
         supabaseSession.updateWarnings(warningCount + 1, tabSwitchCount + 1, warningCount);
         
-        // Immediate termination on any tab switch during test
         toast({
           title: "Test Terminated",
           description: "Tab switching detected. Test has been automatically terminated.",
@@ -304,7 +404,6 @@ const TakeTest = () => {
 
     const handleBlur = () => {
       if (test && isFullscreen) {
-        // Log window blur to Supabase
         supabaseSession.logMonitoringEvent("window_blur", { reason: "focus_lost" });
         
         toast({
@@ -318,7 +417,6 @@ const TakeTest = () => {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (test && isFullscreen) {
-        // Prevent common shortcuts that might exit fullscreen or switch tabs
         if (
           (e.ctrlKey && (e.key === 't' || e.key === 'w' || e.key === 'Tab')) ||
           (e.altKey && e.key === 'Tab') ||
@@ -359,26 +457,6 @@ const TakeTest = () => {
     };
   }, [test, isFullscreen, toast, supabaseSession, warningCount, tabSwitchCount]);
 
-  // Handle when multiple people are detected (now handled by WebcamMonitor)
-  const handleMultiplePeopleDetected = (count: number) => {
-    toast({
-      title: `Security Warning`,
-      description: `Multiple people detected (${count}). You should be alone during the test.`,
-      variant: "destructive",
-    });
-  };
-
-  // Handle when face is not detected or looking away (now handled by WebcamMonitor)
-  const handleFaceNotDetected = (direction: string) => {
-    toast({
-      title: `Webcam Warning`,
-      description: direction === "No face detected" 
-        ? "Your face is not visible. Please face the camera."
-        : `You appear to be looking ${direction.toLowerCase()}. Please look at the screen.`,
-      variant: "destructive",
-    });
-  };
-
   // Save answer after change (debounced)
   useEffect(() => {
     const saveTimeout = setTimeout(async () => {
@@ -412,8 +490,6 @@ const TakeTest = () => {
     if (!e.target.files || !e.target.files[0] || !user || !test) return;
     
     const file = e.target.files[0];
-    
-    // Create a preview URL
     const previewUrl = URL.createObjectURL(file);
     
     setImageFiles(prev => ({
@@ -426,14 +502,12 @@ const TakeTest = () => {
       [questionId]: previewUrl
     }));
     
-    // Set a placeholder answer to track that this question has been answered
     setAnswers(prev => ({
       ...prev,
       [questionId]: "image_uploaded"
     }));
     
     try {
-      // Save image locally (base64) for this user/test/question
       const reader = new FileReader();
       const dataUrl: string = await new Promise((resolve, reject) => {
         reader.onload = () => resolve(reader.result as string);
@@ -446,7 +520,6 @@ const TakeTest = () => {
       existingImages[questionId] = dataUrl;
       localStorage.setItem(imagesKey, JSON.stringify(existingImages));
 
-      // Also persist the placeholder answer so reloading restores state
       const answersKey = `pariksha_answers_${test.id}_${user.id}`;
       const existingAnswers = JSON.parse(localStorage.getItem(answersKey) || '{}');
       existingAnswers[questionId] = "image_uploaded";
@@ -483,18 +556,15 @@ const TakeTest = () => {
     setIsSubmitting(true);
     
     try {
-      // Stop monitoring
       stopMonitoring();
       webcamMonitoring.stopMonitoring();
       
-      // Clean up any object URLs to avoid memory leaks
       Object.values(imagePreviewUrls).forEach(url => {
         if (url.startsWith('blob:')) {
           URL.revokeObjectURL(url);
         }
       });
       
-      // Update Supabase session status
       const status = forced ? "terminated" : "submitted";
       await supabaseSession.updateStatus(status);
       
@@ -518,7 +588,6 @@ const TakeTest = () => {
     }
   };
 
-  // Create wrapper functions for onClick handlers
   const handleSubmitClick = () => {
     handleSubmit(false);
   };
@@ -679,12 +748,29 @@ const TakeTest = () => {
               />
             </div>
 
-            {/* WebcamMonitor component */}
-            <WebcamMonitor
-              isActive={webcamMonitoring.isMonitoring}
-              onViolation={webcamMonitoring.addViolation}
-              onStatusUpdate={webcamMonitoring.updateStatus}
-            />
+            {/* WebcamMonitor component - Draggable */}
+            <div
+              className="fixed z-50 touch-none"
+              style={{
+                left: webcamPosition.x || 'auto',
+                top: webcamPosition.y || '80px',
+                right: webcamPosition.x ? 'auto' : '1rem',
+                cursor: isWebcamDragging ? 'grabbing' : 'grab'
+              }}
+              onMouseDown={handleWebcamMouseDown}
+              onTouchStart={handleWebcamTouchStart}
+            >
+              <div className="bg-card/95 backdrop-blur-sm border border-primary/20 rounded-lg shadow-lg overflow-hidden">
+                <div className="bg-primary/10 px-3 py-1.5 border-b border-primary/20">
+                  <p className="text-xs font-medium text-center">Camera Monitor (Drag to Move)</p>
+                </div>
+                <WebcamMonitor
+                  isActive={webcamMonitoring.isMonitoring}
+                  onViolation={webcamMonitoring.addViolation}
+                  onStatusUpdate={webcamMonitoring.updateStatus}
+                />
+              </div>
+            </div>
 
             {/* Test header */}
             <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-4 sm:mb-6 gap-3">
@@ -956,18 +1042,37 @@ const TakeTest = () => {
               </Button>
             </div>
 
-            {/* Sound Monitor - Compact positioning for mobile */}
-            <div className="fixed bottom-2 right-2 sm:bottom-4 sm:right-4 z-50 w-[180px] sm:w-60">
-              <SoundMonitor
-                onHighVolumeDetected={handleHighVolumeDetected}
-                onSoundLevelChange={handleSoundLevelChange}
-                threshold={40}
-                enabled={isFullscreen && testIdVerified}
-              />
+            {/* Sound Monitor - Draggable and adjustable for mobile */}
+            <div
+              className="fixed z-50 touch-none"
+              style={{
+                left: soundMonitorPosition.x || 'auto',
+                top: soundMonitorPosition.y || 'auto',
+                right: soundMonitorPosition.x ? 'auto' : '0.5rem',
+                bottom: soundMonitorPosition.y ? 'auto' : '0.5rem',
+                width: window.innerWidth < 640 ? '180px' : '240px',
+                cursor: isDragging ? 'grabbing' : 'grab'
+              }}
+              onMouseDown={handleSoundMonitorMouseDown}
+              onTouchStart={handleSoundMonitorTouchStart}
+            >
+              <div className="bg-card/95 backdrop-blur-sm border border-primary/20 rounded-lg shadow-lg">
+                <div className="bg-primary/10 px-2 py-1 border-b border-primary/20">
+                  <p className="text-xs font-medium text-center">Volume Monitor (Drag to Move)</p>
+                </div>
+                <div className="pointer-events-auto">
+                  <SoundMonitor
+                    onHighVolumeDetected={handleHighVolumeDetected}
+                    onSoundLevelChange={handleSoundLevelChange}
+                    threshold={40}
+                    enabled={isFullscreen && testIdVerified}
+                  />
+                </div>
+              </div>
               
               {/* Sound Alerts Summary - Compact for mobile */}
               {soundAlerts > 0 && (
-                <Card className="mt-1 sm:mt-2 bg-card/95 backdrop-blur-sm border-red-500/30">
+                <Card className="mt-1 sm:mt-2 bg-card/95 backdrop-blur-sm border-red-500/30 pointer-events-auto">
                   <CardContent className="p-2">
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-medium text-red-500">Violations</span>
