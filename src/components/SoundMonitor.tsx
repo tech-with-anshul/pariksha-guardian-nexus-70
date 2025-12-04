@@ -23,7 +23,7 @@ const SoundMonitor = ({
   const [showAlert, setShowAlert] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
-  const dataArrayRef = useRef<Uint8Array | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -90,7 +90,10 @@ const SoundMonitor = ({
     analyserRef.current.getByteFrequencyData(dataArrayRef.current);
 
     // Calculate average volume level
-    const sum = dataArrayRef.current.reduce((a, b) => a + b, 0);
+    let sum = 0;
+    for (let i = 0; i < dataArrayRef.current.length; i++) {
+      sum += dataArrayRef.current[i];
+    }
     const average = sum / dataArrayRef.current.length;
     const volumeLevel = Math.round((average / 255) * 100);
 
