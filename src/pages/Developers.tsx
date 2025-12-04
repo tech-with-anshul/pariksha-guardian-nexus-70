@@ -26,18 +26,18 @@ const Developers = () => {
   const teamMembers = [
     {
       name: "Anshul",
-      role: "Full Stack Developer",
+      role: "Devops Engineer & Full Stack Developer",
       image: "https://media.licdn.com/dms/image/v2/D5603AQGAhRojdFVoPQ/profile-displayphoto-scale_200_200/B56ZflCP5LGoAY-/0/1751894263400?e=1766016000&v=beta&t=bzq6gumZPPjMz7o_OCw0bH6NCp27vGCnUgs0p7bRwjs",
       bio: "Passionate about building scalable applications and crafting exceptional user experiences. Specializes in React, Node.js, and cloud architecture.",
       skills: ["React", "TypeScript", "Node.js", "Python", "AWS"],
       color: "from-blue-500 to-cyan-500",
-      linkedin: "https://linkedin.com/in/anshul",
-      github: "https://github.com/anshul",
-      email: "anshul@pariksha.edu"
+      linkedin: "https://linkedin.com/in/anshultech1",
+      github: "https://github.com/tech-with-anshul",
+      email: "kanshulmussoorie@gmail.com"
     },
     {
       name: "Ishika Saxena",
-      role: "UI/UX Designer & Developer",
+      role: "AI Specialist & LLM Engineer",
       image: "https://media.licdn.com/dms/image/v2/D5603AQHWE2DpNCRHwQ/profile-displayphoto-shrink_200_200/B56ZeXWRagHUAg-/0/1750590888794?e=1766016000&v=beta&t=LvKbvq1hp3JVtP6gvUe99nDK9Oy-_mXu-HcmDgY_GG4",
       bio: "Creative designer with a keen eye for detail. Transforms complex ideas into intuitive, beautiful interfaces that users love.",
       skills: ["Figma", "React", "Tailwind CSS", "Framer Motion", "UI/UX"],
