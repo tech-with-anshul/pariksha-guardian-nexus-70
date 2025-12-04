@@ -52,7 +52,7 @@ const StudentDashboard = () => {
 
   // Get only published tests that students can take
   const availableTests = tests.filter(test => test.status === "published");
-  const completedTests = tests.filter(test => test.status === "completed");
+  const completedTests: typeof tests = []; // Placeholder for completed tests from test_results table
 
   // Mock data for enhanced features
   const studentStats = {
