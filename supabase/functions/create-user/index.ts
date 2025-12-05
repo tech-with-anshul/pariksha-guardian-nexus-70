@@ -60,6 +60,44 @@ Deno.serve(async (req) => {
 
     const userId = authData.user.id;
 
+    // Wait for the profile to be created by the trigger (with retries)
+    let profileExists = false;
+    for (let i = 0; i < 5; i++) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("id")
+        .eq("id", userId)
+        .single();
+      
+      if (profile) {
+        profileExists = true;
+        break;
+      }
+      // Wait 500ms before retrying
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+
+    // If profile still doesn't exist, create it manually
+    if (!profileExists) {
+      console.log("Profile not created by trigger, creating manually");
+      const { error: profileError } = await supabaseAdmin
+        .from("profiles")
+        .insert({
+          id: userId,
+          email: email,
+          full_name: full_name,
+        });
+      
+      if (profileError) {
+        console.error("Profile creation error:", profileError);
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: `Failed to create profile: ${profileError.message}` }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+    }
+
     // Add role to user_roles table
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
