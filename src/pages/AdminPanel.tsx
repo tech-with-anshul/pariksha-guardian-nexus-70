@@ -214,9 +214,9 @@ const AdminPanel = () => {
         [role === "faculty" ? "department" : "course"]: role === "faculty" ? userData.department : userData.course,
       };
       
-      const success = await addUser(newUserData);
+      const result = await addUser(newUserData);
       
-      if (success) {
+      if (result.success) {
         // Refresh user lists
         const facultyData = await getUsers("faculty");
         const studentsData = await getUsers("student");
@@ -233,7 +233,7 @@ const AdminPanel = () => {
       } else {
         toast({
           title: "Error",
-          description: "Failed to add user. Email or ERP ID may already exist.",
+          description: result.error || "Failed to add user",
           variant: "destructive",
         });
       }

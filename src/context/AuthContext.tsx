@@ -21,12 +21,17 @@ interface MockUser extends Omit<User, "id"> {
   password: string;
 }
 
+interface AddUserResult {
+  success: boolean;
+  error?: string;
+}
+
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (identifier: string, password: string, role: UserRole) => Promise<boolean>;
   logout: () => void;
-  addUser: (userData: Omit<User, "id"> & { password: string }) => Promise<boolean>;
+  addUser: (userData: Omit<User, "id"> & { password: string }) => Promise<AddUserResult>;
   updateUser: (id: string, userData: Partial<User> & { password?: string }) => Promise<boolean>;
   deleteUser: (id: string) => Promise<boolean>;
   getUsers: (role: UserRole) => Promise<User[]>;
@@ -149,10 +154,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("pariksha_user");
   };
 
-  const addUser = async (userData: Omit<User, "id"> & { password: string }): Promise<boolean> => {
+  const addUser = async (userData: Omit<User, "id"> & { password: string }): Promise<AddUserResult> => {
     const { role, name, email, password } = userData;
     if (!role || (role !== "faculty" && role !== "student" && role !== "admin")) {
-      return false;
+      return { success: false, error: "Invalid role specified" };
     }
 
     try {
@@ -168,12 +173,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error("Error creating user:", error);
-        return false;
+        return { success: false, error: error.message || "Failed to create user" };
       }
 
       if (!data.success) {
         console.error("Failed to create user:", data.error);
-        return false;
+        return { success: false, error: data.error || "Failed to create user" };
       }
 
       // Also add to local state for immediate UI update
@@ -208,10 +213,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setUsers(updatedUsers);
       localStorage.setItem("pariksha_users_data", JSON.stringify(updatedUsers));
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error("Error creating user:", error);
-      return false;
+      return { success: false, error: error.message || "Failed to create user" };
     }
   };
 
