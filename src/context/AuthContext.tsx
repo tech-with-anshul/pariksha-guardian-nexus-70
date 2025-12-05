@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 // Define user types
 export type UserRole = "faculty" | "student" | "admin" | null;
@@ -149,57 +150,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const addUser = async (userData: Omit<User, "id"> & { password: string }): Promise<boolean> => {
-    // Simulate API call delay
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
-    const { role } = userData;
+    const { role, name, email, password } = userData;
     if (!role || (role !== "faculty" && role !== "student" && role !== "admin")) {
       return false;
     }
 
-    // Check if user with same email or erpId already exists
-    const allUsers = [...users.faculty, ...users.student, ...users.admin];
-    const userExists = allUsers.some(
-      (u) => u.email === userData.email || u.erpId === userData.erpId
-    );
+    try {
+      // Call edge function to create user in Supabase
+      const { data, error } = await supabase.functions.invoke("create-user", {
+        body: {
+          email,
+          password,
+          full_name: name,
+          role,
+        },
+      });
 
-    if (userExists) {
+      if (error) {
+        console.error("Error creating user:", error);
+        return false;
+      }
+
+      if (!data.success) {
+        console.error("Failed to create user:", data.error);
+        return false;
+      }
+
+      // Also add to local state for immediate UI update
+      const newId = data.user.id;
+      
+      let newUser: MockUser;
+      
+      if (role === "faculty") {
+        newUser = {
+          ...userData,
+          id: newId,
+          department: userData.department || "Unknown",
+          permissions: userData.permissions || [...DEFAULT_PERMISSIONS[role]],
+        } as MockUser;
+      } else if (role === "student") {
+        newUser = {
+          ...userData,
+          id: newId, 
+          course: userData.course || "Unknown",
+          permissions: userData.permissions || [...DEFAULT_PERMISSIONS[role]],
+        } as MockUser;
+      } else {
+        newUser = {
+          ...userData,
+          id: newId,
+          permissions: userData.permissions || [...DEFAULT_PERMISSIONS[role]],
+        } as MockUser;
+      }
+
+      const updatedUsers = { ...users };
+      updatedUsers[role] = [...updatedUsers[role], newUser];
+      
+      setUsers(updatedUsers);
+      localStorage.setItem("pariksha_users_data", JSON.stringify(updatedUsers));
+      return true;
+    } catch (error) {
+      console.error("Error creating user:", error);
       return false;
     }
-
-    // Generate a new UUID
-    const newId = crypto.randomUUID();
-    
-    let newUser: MockUser;
-    
-    if (role === "faculty") {
-      newUser = {
-        ...userData,
-        id: newId,
-        department: userData.department || "Unknown",
-        permissions: userData.permissions || [...DEFAULT_PERMISSIONS[role]],
-      } as MockUser;
-    } else if (role === "student") {
-      newUser = {
-        ...userData,
-        id: newId, 
-        course: userData.course || "Unknown",
-        permissions: userData.permissions || [...DEFAULT_PERMISSIONS[role]],
-      } as MockUser;
-    } else {
-      newUser = {
-        ...userData,
-        id: newId,
-        permissions: userData.permissions || [...DEFAULT_PERMISSIONS[role]],
-      } as MockUser;
-    }
-
-    const updatedUsers = { ...users };
-    updatedUsers[role] = [...updatedUsers[role], newUser];
-    
-    setUsers(updatedUsers);
-    localStorage.setItem("pariksha_users_data", JSON.stringify(updatedUsers));
-    return true;
   };
 
   const updateUser = async (id: string, userData: Partial<User> & { password?: string }): Promise<boolean> => {
