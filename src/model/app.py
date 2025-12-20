@@ -1,150 +1,400 @@
-import base64
-import matplotlib.pyplot as plt
-from flask import Flask
+"""
+Pariksha Guardian Nexus - AI Proctoring API Server
+
+YOLO-based Cheating Detection REST API for real-time exam proctoring.
+
+Endpoints:
+- POST /analyze - Complete cheating analysis
+- POST /detect_objects - Object detection only
+- POST /detect_pose - Head pose estimation
+- POST /predict_people - Person count detection
+- POST /predict_pose - Legacy pose detection
+- GET /health - Health check
+
+Author: Pariksha Guardian Team
+"""
 
 import os
-from flask import request, jsonify
-import tensorflow as tf 
-import tensorflow_hub as hub 
-import cv2 
+import base64
+import json
+from datetime import datetime
+from typing import Dict, Any, Optional
+import logging
+
+import cv2
 import numpy as np
-from mark_detector import MarkDetector
-from pose_estimator import PoseEstimator
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
+# Import our cheating detector
+from cheating_detector import YOLOCheatingDetector, AdvancedHeadPoseEstimator, CheatingAnalysis
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# Initialize Flask app
 app = Flask(__name__)
+CORS(app, origins=["*"])
 
-multiple_people_detector = hub.load("https://tfhub.dev/tensorflow/efficientdet/d0/1")
-
-# Thresholds for head pose detection (in degrees)
-PITCH_THRESHOLD_UP = -15  # Looking up threshold
-PITCH_THRESHOLD_DOWN = 15  # Looking down threshold
-YAW_THRESHOLD = 20  # Looking left/right threshold
+# Initialize detectors (lazy loading)
+cheating_detector: Optional[YOLOCheatingDetector] = None
+advanced_pose_estimator: Optional[AdvancedHeadPoseEstimator] = None
 
 
+def get_cheating_detector() -> YOLOCheatingDetector:
+    """Get or create the cheating detector instance"""
+    global cheating_detector
+    if cheating_detector is None:
+        cheating_detector = YOLOCheatingDetector(confidence_threshold=0.4)
+        cheating_detector.initialize()
+    return cheating_detector
 
-def readb64(uri):
-   encoded_data = uri.split(',')[1]
-   nparr = np.fromstring(base64.b64decode(encoded_data), np.uint8)
-   img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-   img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-   return img
+
+def get_pose_estimator() -> AdvancedHeadPoseEstimator:
+    """Get or create the advanced pose estimator"""
+    global advanced_pose_estimator
+    if advanced_pose_estimator is None:
+        advanced_pose_estimator = AdvancedHeadPoseEstimator()
+        advanced_pose_estimator.initialize()
+    return advanced_pose_estimator
 
 
-def classify_head_pose(rotation_vector):
+def decode_base64_image(uri: str) -> np.ndarray:
     """
-    Classify head pose based on rotation vector (pitch, yaw, roll).
+    Decode base64 encoded image to numpy array.
     
     Args:
-        rotation_vector: Array containing [pitch, yaw, roll] in radians
+        uri: Base64 encoded image string (with or without data URI prefix)
         
     Returns:
-        dict: Contains pose classification and angle values
+        BGR image as numpy array
     """
-    # Convert radians to degrees
-    pitch = np.degrees(rotation_vector[0])
-    yaw = np.degrees(rotation_vector[1])
-    roll = np.degrees(rotation_vector[2])
+    try:
+        # Handle data URI format
+        if ',' in uri:
+            encoded_data = uri.split(',')[1]
+        else:
+            encoded_data = uri
+        
+        # Decode base64
+        img_data = base64.b64decode(encoded_data)
+        nparr = np.frombuffer(img_data, np.uint8)
+        
+        # Decode image
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        
+        if img is None:
+            raise ValueError("Failed to decode image")
+        
+        return img
     
-    pose_status = {
-        'looking_up': False,
-        'looking_down': False,
-        'looking_left': False,
-        'looking_right': False,
-        'looking_straight': False,
-        'pitch': float(pitch),
-        'yaw': float(yaw),
-        'roll': float(roll)
-    }
+    except Exception as e:
+        logger.error(f"Failed to decode image: {e}")
+        raise ValueError(f"Invalid image data: {e}")
+
+
+def encode_image_base64(img: np.ndarray, format: str = 'jpg') -> str:
+    """
+    Encode numpy array image to base64 string.
     
-    # Detect looking up/down based on pitch
-    if pitch < PITCH_THRESHOLD_UP:
-        pose_status['looking_up'] = True
-    elif pitch > PITCH_THRESHOLD_DOWN:
-        pose_status['looking_down'] = True
+    Args:
+        img: BGR image as numpy array
+        format: Image format (jpg or png)
+        
+    Returns:
+        Base64 encoded string with data URI prefix
+    """
+    try:
+        if format.lower() == 'png':
+            _, buffer = cv2.imencode('.png', img)
+            mime_type = 'image/png'
+        else:
+            _, buffer = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])
+            mime_type = 'image/jpeg'
+        
+        encoded = base64.b64encode(buffer).decode('utf-8')
+        return f"data:{mime_type};base64,{encoded}"
     
-    # Detect looking left/right based on yaw
-    if yaw < -YAW_THRESHOLD:
-        pose_status['looking_left'] = True
-    elif yaw > YAW_THRESHOLD:
-        pose_status['looking_right'] = True
+    except Exception as e:
+        logger.error(f"Failed to encode image: {e}")
+        return ""
+
+
+@app.route('/analyze', methods=['POST'])
+def analyze_cheating():
+    """
+    Complete cheating analysis endpoint.
     
-    # If within thresholds, looking straight
-    if (abs(pitch) < 10 and abs(yaw) < 10):
-        pose_status['looking_straight'] = True
+    Performs YOLO object detection, person counting, and head pose estimation.
     
-    return pose_status
-
-
-@app.route('/predict_pose', methods = ['GET', 'POST']) 
-def predict_pose() : 
-    data = request.get_json(force = True) 
-    image = r'{}'.format(data['img'])
-    print(type(image), image)
-    image= readb64(image)
-    plt.imshow(image)
+    Request JSON:
+        - img: Base64 encoded image
+        - return_annotated: Boolean to return annotated image (default: False)
     
-    height, width = image.shape[0], image.shape[1]
-    pose_estimator = PoseEstimator(img_size=(height, width))
-    mark_detector = MarkDetector()
-
-    facebox = mark_detector.extract_cnn_facebox(image)
-    frame = image
-    
-    if facebox is not None:
-        # Step 2: Detect landmarks. Crop and feed the face area into the
-        # mark detector.
-        x1, y1, x2, y2 = facebox
-        face_img = frame[y1: y2, x1: x2]
-
-        # Run the detection.
-        marks = mark_detector.detect_marks(face_img)
-
-        # Convert the locations from local face area to the global image.
-        marks *= (x2 - x1)
-        marks[:, 0] += x1
-        marks[:, 1] += y1
-
-        # Try pose estimation with 68 points.
-        pose = pose_estimator.solve_pose_by_68_points(marks)
-
-        # Classify head pose
-        pose_classification = classify_head_pose(pose[0])
-
-        # All done. The best way to show the result would be drawing the
-        # pose on the frame in realtime.
-
-        # Do you want to see the pose annotation?
-        img, pose_vector = pose_estimator.draw_annotation_box(frame, pose[0], pose[1], color=(0, 255, 0))
-
+    Returns:
+        JSON with complete analysis results
+    """
+    try:
+        data = request.get_json(force=True)
+        
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        # Decode image
+        image = decode_base64_image(data['img'])
+        timestamp = datetime.now().isoformat()
+        
+        # Run analysis
+        detector = get_cheating_detector()
+        analysis = detector.analyze_frame(image, timestamp)
+        
         # Prepare response
         response = {
-            'message': 'face found',
-            'pose': {
-                'rotation_vector': pose[0].tolist(),
-                'translation_vector': pose[1].tolist()
-            },
-            'head_pose': pose_classification,
-            'warnings': []
+            'success': True,
+            'timestamp': analysis.timestamp,
+            'is_cheating': analysis.is_cheating,
+            'cheating_types': analysis.cheating_types,
+            'confidence_score': analysis.confidence_score,
+            'warnings': analysis.warnings,
+            'person_count': analysis.person_count,
+            'head_pose': analysis.head_pose,
+            'severity': analysis.severity,
+            'detections': analysis.detections
         }
         
-        # Add warnings for suspicious behavior
-        if pose_classification['looking_up']:
-            response['warnings'].append('Student is looking up')
-        if pose_classification['looking_down']:
-            response['warnings'].append('Student is looking down')
-        if pose_classification['looking_left']:
-            response['warnings'].append('Student is looking left')
-        if pose_classification['looking_right']:
-            response['warnings'].append('Student is looking right')
+        # Optionally return annotated image
+        if data.get('return_annotated', False):
+            annotated = detector.draw_detections(image, analysis)
+            response['annotated_image'] = encode_image_base64(annotated)
         
         return jsonify(response)
-    else :
+    
+    except ValueError as e:
+        return jsonify({'error': str(e), 'success': False}), 400
+    except Exception as e:
+        logger.error(f"Analysis error: {e}")
+        return jsonify({'error': 'Analysis failed', 'success': False}), 500
+
+
+@app.route('/detect_objects', methods=['POST'])
+def detect_objects():
+    """
+    Object detection only endpoint.
+    
+    Request JSON:
+        - img: Base64 encoded image
+    
+    Returns:
+        JSON with detected objects
+    """
+    try:
+        data = request.get_json(force=True)
+        
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        image = decode_base64_image(data['img'])
+        
+        detector = get_cheating_detector()
+        detections = detector.detect_objects(image)
+        
+        # Filter for cheating-related objects
+        cheating_objects = [
+            {
+                'class_name': d.class_name,
+                'confidence': d.confidence,
+                'bbox': list(d.bbox),
+                'is_cheating_object': d.is_cheating_object
+            }
+            for d in detections
+        ]
+        
         return jsonify({
-            'message': 'face not found',
-            'pose': None,
-            'head_pose': None,
-            'warnings': ['No face detected in the frame']
+            'success': True,
+            'objects': cheating_objects,
+            'total_count': len(detections),
+            'cheating_objects_count': sum(1 for d in detections if d.is_cheating_object)
         })
+    
+    except ValueError as e:
+        return jsonify({'error': str(e), 'success': False}), 400
+    except Exception as e:
+        logger.error(f"Object detection error: {e}")
+        return jsonify({'error': 'Detection failed', 'success': False}), 500
+
+
+@app.route('/detect_pose', methods=['POST'])
+def detect_pose():
+    """
+    Head pose estimation endpoint.
+    
+    Request JSON:
+        - img: Base64 encoded image
+        - use_advanced: Boolean to use MediaPipe-based estimation (default: False)
+    
+    Returns:
+        JSON with head pose information
+    """
+    try:
+        data = request.get_json(force=True)
+        
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        image = decode_base64_image(data['img'])
+        
+        if data.get('use_advanced', False):
+            # Use MediaPipe-based advanced estimation
+            pose_estimator = get_pose_estimator()
+            # Convert to RGB for MediaPipe
+            image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            pose = pose_estimator.estimate_pose(image_rgb)
+        else:
+            # Use basic estimation
+            detector = get_cheating_detector()
+            pose = detector.estimate_head_pose(image)
+        
+        if pose is None:
+            return jsonify({
+                'success': True,
+                'face_detected': False,
+                'message': 'No face detected',
+                'head_pose': None,
+                'warnings': ['Face not visible in frame']
+            })
+        
+        warnings = []
+        if not pose.looking_straight:
+            warnings.append(f'Student looking {pose.direction}')
+        
+        return jsonify({
+            'success': True,
+            'face_detected': True,
+            'message': 'Face detected',
+            'head_pose': {
+                'pitch': pose.pitch,
+                'yaw': pose.yaw,
+                'roll': pose.roll,
+                'looking_straight': pose.looking_straight,
+                'direction': pose.direction
+            },
+            'warnings': warnings
+        })
+    
+    except ValueError as e:
+        return jsonify({'error': str(e), 'success': False}), 400
+    except Exception as e:
+        logger.error(f"Pose detection error: {e}")
+        return jsonify({'error': 'Pose detection failed', 'success': False}), 500
+
+
+@app.route('/predict_people', methods=['GET', 'POST'])
+def predict_people():
+    """
+    Person count detection endpoint (legacy compatible).
+    
+    Request JSON:
+        - img: Base64 encoded image
+    
+    Returns:
+        JSON with person count
+    """
+    try:
+        data = request.get_json(force=True)
+        
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        image = decode_base64_image(data['img'])
+        
+        detector = get_cheating_detector()
+        detections = detector.detect_objects(image)
+        person_count = detector.count_persons(detections)
+        
+        return jsonify({
+            'people': person_count,
+            'multiple_persons': person_count > 1,
+            'no_person': person_count == 0
+        })
+    
+    except ValueError as e:
+        return jsonify({'error': str(e), 'people': 0}), 400
+    except Exception as e:
+        logger.error(f"People detection error: {e}")
+        return jsonify({'error': 'Detection failed', 'people': 0}), 500
+
+
+@app.route('/predict_pose', methods=['GET', 'POST'])
+def predict_pose():
+    """
+    Legacy head pose detection endpoint (backward compatible).
+    
+    Request JSON:
+        - img: Base64 encoded image
+    
+    Returns:
+        JSON with pose information in legacy format
+    """
+    try:
+        data = request.get_json(force=True)
+        
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        image = decode_base64_image(data['img'])
+        
+        detector = get_cheating_detector()
+        pose = detector.estimate_head_pose(image)
+        
+        if pose is None:
+            return jsonify({
+                'message': 'face not found',
+                'pose': None,
+                'head_pose': None,
+                'warnings': ['No face detected in the frame']
+            })
+        
+        # Build legacy-compatible response
+        warnings = []
+        head_pose = {
+            'looking_up': pose.direction == 'up',
+            'looking_down': pose.direction == 'down',
+            'looking_left': pose.direction == 'left',
+            'looking_right': pose.direction == 'right',
+            'looking_straight': pose.looking_straight,
+            'pitch': pose.pitch,
+            'yaw': pose.yaw,
+            'roll': pose.roll
+        }
+        
+        if head_pose['looking_up']:
+            warnings.append('Student is looking up')
+        if head_pose['looking_down']:
+            warnings.append('Student is looking down')
+        if head_pose['looking_left']:
+            warnings.append('Student is looking left')
+        if head_pose['looking_right']:
+            warnings.append('Student is looking right')
+        
+        return jsonify({
+            'message': 'face found',
+            'pose': {
+                'rotation_vector': [pose.pitch, pose.yaw, pose.roll],
+                'translation_vector': [0, 0, 0]
+            },
+            'head_pose': head_pose,
+            'warnings': warnings
+        })
+    
+    except ValueError as e:
+        return jsonify({'error': str(e), 'message': 'face not found'}), 400
+    except Exception as e:
+        logger.error(f"Pose prediction error: {e}")
+        return jsonify({'error': 'Detection failed', 'message': 'face not found'}), 500
 
 
 
@@ -152,164 +402,161 @@ def predict_pose() :
 @app.route('/predict_pose_detailed', methods=['GET', 'POST'])
 def predict_pose_detailed():
     """
-    Enhanced endpoint with detailed pose analysis and visual feedback
+    Detailed pose detection with annotated image.
+    
+    Request JSON:
+        - img: Base64 encoded image
+    
+    Returns:
+        JSON with detailed pose info and annotated image
     """
-    data = request.get_json(force=True)
-    image = r'{}'.format(data['img'])
-    image = readb64(image)
-    
-    height, width = image.shape[0], image.shape[1]
-    pose_estimator = PoseEstimator(img_size=(height, width))
-    mark_detector = MarkDetector()
-
-    facebox = mark_detector.extract_cnn_facebox(image)
-    frame = image.copy()
-    
-    if facebox is not None:
-        x1, y1, x2, y2 = facebox
-        face_img = frame[y1: y2, x1: x2]
-
-        # Run the detection
-        marks = mark_detector.detect_marks(face_img)
-
-        # Convert the locations from local face area to the global image
-        marks *= (x2 - x1)
-        marks[:, 0] += x1
-        marks[:, 1] += y1
-
-        # Pose estimation
-        pose = pose_estimator.solve_pose_by_68_points(marks)
-
-        # Classify head pose
-        pose_classification = classify_head_pose(pose[0])
-
-        # Draw annotation box
-        img_annotated, pose_vector = pose_estimator.draw_annotation_box(
-            frame, pose[0], pose[1], 
-            color=(0, 255, 0) if pose_classification['looking_straight'] else (255, 0, 0)
-        )
-
-        # Draw marks
-        mark_detector.draw_marks(img_annotated, marks, color=(0, 255, 0))
-
-        # Draw facebox
-        mark_detector.draw_box(img_annotated, [facebox])
-
-        # Add text overlay with pose information
-        text_y = 30
-        cv2.putText(img_annotated, f"Pitch: {pose_classification['pitch']:.2f}", 
-                    (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        text_y += 25
-        cv2.putText(img_annotated, f"Yaw: {pose_classification['yaw']:.2f}", 
-                    (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        text_y += 25
-        cv2.putText(img_annotated, f"Roll: {pose_classification['roll']:.2f}", 
-                    (10, text_y), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    try:
+        data = request.get_json(force=True)
         
-        # Add warning text
-        if not pose_classification['looking_straight']:
-            warning_text = ""
-            if pose_classification['looking_up']:
-                warning_text = "LOOKING UP!"
-            elif pose_classification['looking_down']:
-                warning_text = "LOOKING DOWN!"
-            elif pose_classification['looking_left']:
-                warning_text = "LOOKING LEFT!"
-            elif pose_classification['looking_right']:
-                warning_text = "LOOKING RIGHT!"
-            
-            cv2.putText(img_annotated, warning_text, (10, height - 20), 
-                        cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
-
-        # Convert annotated image to base64
-        _, buffer = cv2.imencode('.jpg', cv2.cvtColor(img_annotated, cv2.COLOR_RGB2BGR))
-        img_base64 = base64.b64encode(buffer).decode('utf-8')
-
-        response = {
-            'message': 'face found',
-            'pose': {
-                'rotation_vector': pose[0].tolist(),
-                'translation_vector': pose[1].tolist()
-            },
-            'head_pose': pose_classification,
-            'annotated_image': f"data:image/jpeg;base64,{img_base64}",
-            'warnings': []
-        }
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
         
-        # Add warnings
-        if pose_classification['looking_up']:
-            response['warnings'].append('Student is looking up')
-        if pose_classification['looking_down']:
-            response['warnings'].append('Student is looking down')
-        if pose_classification['looking_left']:
-            response['warnings'].append('Student is looking left')
-        if pose_classification['looking_right']:
-            response['warnings'].append('Student is looking right')
+        image = decode_base64_image(data['img'])
+        timestamp = datetime.now().isoformat()
         
-        return jsonify(response)
-    else:
+        detector = get_cheating_detector()
+        analysis = detector.analyze_frame(image, timestamp)
+        
+        # Draw annotations
+        annotated = detector.draw_detections(image, analysis)
+        annotated_base64 = encode_image_base64(annotated)
+        
+        # Build legacy-compatible response
+        warnings = analysis.warnings
+        head_pose = analysis.head_pose
+        
         return jsonify({
-            'message': 'face not found',
-            'pose': None,
-            'head_pose': None,
-            'annotated_image': None,
-            'warnings': ['No face detected in the frame']
+            'message': 'face found' if analysis.person_count > 0 else 'face not found',
+            'pose': {
+                'rotation_vector': [head_pose['pitch'], head_pose['yaw'], head_pose['roll']] if head_pose else [0, 0, 0],
+                'translation_vector': [0, 0, 0]
+            },
+            'head_pose': head_pose,
+            'annotated_image': annotated_base64,
+            'warnings': warnings,
+            'cheating_detected': analysis.is_cheating,
+            'severity': analysis.severity,
+            'detections': analysis.detections
         })
-
-
-@app.route('/predict_people',methods=['GET','POST'])
-def predict() : 
-    data = request.get_json(force = True)
-    image= readb64(data['img'])
-    im_width, im_height = image.shape[0], image.shape[1]
-    image = image.reshape((1, image.shape[0], image.shape[1], 3))
     
-    data = multiple_people_detector(image)
-
-    boxes = data['detection_boxes'].numpy()[0]
-    classes = data['detection_classes'].numpy()[0]
-    scores = data['detection_scores'].numpy()[0]
-
-    threshold = 0.5
-    people = 0
-    for i in range(int(data['num_detections'][0])):
-        if classes[i] == 1 and scores[i] > threshold:
-            people += 1
-            ymin, xmin, ymax, xmax = boxes[i]
-            (left, right, top, bottom) = (xmin * im_width, xmax * im_width,
-                                          ymin * im_height, ymax * im_height)
-
-    return jsonify({ 'people' : int(people) , 'image' : 'image'})
+    except ValueError as e:
+        return jsonify({'error': str(e), 'message': 'face not found'}), 400
+    except Exception as e:
+        logger.error(f"Detailed pose prediction error: {e}")
+        return jsonify({'error': 'Detection failed', 'message': 'face not found'}), 500
 
 
-@app.route('/save_img', methods=['GET', 'POST']) 
-def save() : 
-    data = request.get_json(force = True)
-    image = r'{}'.format(data['img'])
-    user = data['user']
-    image= readb64(image)
-    base_dir = os.getcwd()
-    path = r"{}\images\{}.jpg".format(base_dir, user[0:-10])
-    print(path)
-    plt.imsave(path, image)
-    return jsonify({'path' : path})
+@app.route('/save_img', methods=['GET', 'POST'])
+def save_image():
+    """
+    Save image to server (for evidence/logging purposes).
+    
+    Request JSON:
+        - img: Base64 encoded image
+        - user: User identifier
+    
+    Returns:
+        JSON with saved file path
+    """
+    try:
+        data = request.get_json(force=True)
+        
+        if 'img' not in data:
+            return jsonify({'error': 'No image provided'}), 400
+        
+        image = decode_base64_image(data['img'])
+        user = data.get('user', 'unknown')
+        
+        # Create images directory if not exists
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        images_dir = os.path.join(base_dir, 'images')
+        os.makedirs(images_dir, exist_ok=True)
+        
+        # Generate filename with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        user_clean = user.replace('@', '_').replace('.', '_')[:50]
+        filename = f"{user_clean}_{timestamp}.jpg"
+        filepath = os.path.join(images_dir, filename)
+        
+        # Save image
+        cv2.imwrite(filepath, image)
+        
+        return jsonify({
+            'success': True,
+            'path': filepath,
+            'filename': filename
+        })
+    
+    except Exception as e:
+        logger.error(f"Save image error: {e}")
+        return jsonify({'error': 'Failed to save image', 'path': ''}), 500
 
 
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
+    detector_status = "initialized" if cheating_detector is not None else "not_initialized"
+    
     return jsonify({
         'status': 'healthy',
-        'model': 'loaded',
+        'timestamp': datetime.now().isoformat(),
+        'detector_status': detector_status,
+        'model': 'yolov8',
+        'version': '2.0.0',
         'endpoints': [
-            '/predict_pose',
-            '/predict_pose_detailed',
-            '/predict_people',
-            '/save_img'
+            'POST /analyze - Complete cheating analysis',
+            'POST /detect_objects - Object detection',
+            'POST /detect_pose - Head pose estimation',
+            'POST /predict_people - Person count (legacy)',
+            'POST /predict_pose - Pose detection (legacy)',
+            'POST /predict_pose_detailed - Detailed pose with image',
+            'POST /save_img - Save image',
+            'GET /health - Health check'
         ]
     })
 
 
+@app.route('/', methods=['GET'])
+def index():
+    """Root endpoint with API information"""
+    return jsonify({
+        'name': 'Pariksha Guardian Nexus - AI Proctoring API',
+        'version': '2.0.0',
+        'description': 'YOLO-based cheating detection for exam proctoring',
+        'documentation': '/health for available endpoints'
+    })
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({'error': 'Endpoint not found'}), 404
+
+
+@app.errorhandler(500)
+def server_error(e):
+    return jsonify({'error': 'Internal server error'}), 500
+
+
 if __name__ == '__main__':
-    # app.run(debug=True)
-    app.run(host='0.0.0.0',port=8080)
+    # Pre-initialize detector on startup
+    logger.info("Starting Pariksha Guardian AI Proctoring Server...")
+    
+    # Initialize detector
+    try:
+        detector = get_cheating_detector()
+        logger.info("YOLO detector initialized successfully")
+    except Exception as e:
+        logger.warning(f"Failed to pre-initialize detector: {e}")
+        logger.info("Detector will be initialized on first request")
+    
+    # Run server
+    port = int(os.environ.get('PORT', 8080))
+    debug = os.environ.get('DEBUG', 'false').lower() == 'true'
+    
+    logger.info(f"Server starting on port {port}")
+    app.run(host='0.0.0.0', port=port, debug=debug)

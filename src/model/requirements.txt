@@ -1,0 +1,86 @@
+# Pariksha Guardian Nexus - AI Proctoring Model Requirements
+# YOLO-based Cheating Detection System
+#
+# Installation: pip install -r requirements.txt
+# For GPU support: pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu118
+
+# ============================================
+# Core Dependencies
+# ============================================
+
+# Flask Web Framework
+flask>=2.3.0
+flask-cors>=4.0.0
+gunicorn>=21.0.0
+
+# ============================================
+# Computer Vision & Deep Learning
+# ============================================
+
+# OpenCV for image processing
+opencv-python>=4.8.0
+opencv-python-headless>=4.8.0  # For server deployment
+
+# NumPy for numerical operations
+numpy>=1.24.0
+
+# Ultralytics YOLOv8
+ultralytics>=8.0.200
+
+# PyTorch (CPU version - use GPU version for production)
+torch>=2.0.0
+torchvision>=0.15.0
+
+# ============================================
+# Optional: Advanced Features
+# ============================================
+
+# MediaPipe for advanced face mesh and pose estimation
+mediapipe>=0.10.0
+
+# Pillow for image processing
+Pillow>=10.0.0
+
+# ============================================
+# Development & Testing
+# ============================================
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Code quality
+black>=23.0.0
+flake8>=6.0.0
+isort>=5.12.0
+
+# Type checking
+mypy>=1.0.0
+
+# ============================================
+# Deployment & Monitoring
+# ============================================
+
+# Environment variables
+python-dotenv>=1.0.0
+
+# Logging
+loguru>=0.7.0
+
+# ============================================
+# Notes:
+# ============================================
+# 
+# For GPU support with CUDA 11.8:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
+#
+# For GPU support with CUDA 12.1:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#
+# The YOLOv8 model will be automatically downloaded on first run.
+# You can also train a custom model for better cheating detection.
+#
+# To train a custom YOLO model:
+# 1. Prepare dataset with cheating-related objects
+# 2. Create data.yaml with class definitions
+# 3. Run: yolo train model=yolov8n.pt data=data.yaml epochs=100
